@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
       monthlyRes,
       overallRes,
     ] = await Promise.all([
-      query("SELECT client_id FROM clients ORDER BY client_id"),
+      query("SELECT DISTINCT client_id FROM videos WHERE client_id IS NOT NULL ORDER BY client_id"),
 
       query(
         `SELECT channel_name AS name,
@@ -141,10 +141,8 @@ export async function GET(req: NextRequest) {
            COUNT(*) FILTER (WHERE v.processed_at IS NOT NULL) AS total_processed,
            COUNT(*) FILTER (WHERE v.published_flag = true) AS total_published,
            AVG(
-             CASE WHEN v.duration ~ '^[0-9]+:[0-9]+:[0-9]+$'
+             CASE WHEN v.duration IS NOT NULL
                   THEN EXTRACT(EPOCH FROM v.duration::interval) / 60.0
-                  WHEN v.duration ~ '^[0-9]+:[0-9]+$'
-                  THEN SPLIT_PART(v.duration,':',1)::numeric + SPLIT_PART(v.duration,':',2)::numeric / 60.0
                   ELSE NULL
              END
            ) FILTER (WHERE v.published_flag = true) AS avg_dur
