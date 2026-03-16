@@ -287,6 +287,42 @@
 .dataTable tbody tr:hover td { background: #fef2f2; }
 .tableCard .dataTable th { font-size: 8px; padding: 4px 5px; }
 .tableCard .dataTable td { padding: 3px 5px; font-size: 10px; max-width: 80px; }
+.emptyCell { text-align: center; color: #94a3b8; font-size: 11px; padding: 12px !important; }
+
+/* Compact table filters */
+.compactTableWrap { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.compactFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-bottom: 1px solid #f1f3f5;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+.compactSearchWrap { flex: 1; min-width: 80px; }
+.compactSearch {
+  font-size: 10px;
+  padding: 3px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  width: 100%;
+  max-width: 140px;
+}
+.compactSearch:focus { outline: none; border-color: #e9434a; }
+.compactFilterSelect {
+  font-size: 9px;
+  padding: 2px 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #fff;
+  color: #64748b;
+  max-width: 90px;
+  cursor: pointer;
+}
+.compactFilterSelect:focus { outline: none; border-color: #e9434a; }
 
 /* ─── VIDEOS TOOLBAR ─── */
 .dtToolbar {
@@ -353,6 +389,25 @@
   white-space: nowrap;
 }
 .dtBtn:hover { background: #fef2f2; color: #e9434a; border-color: rgba(233,67,74,0.3); }
+.dtFilterSelect {
+  font-size: 10.5px;
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #64748b;
+  max-width: 120px;
+  cursor: pointer;
+}
+.dtFilterSelect:focus { outline: none; border-color: #e9434a; }
+.dtToolbarLeft {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
 
 .dtViewport { flex: 1; overflow-y: auto; min-height: 0; position: relative; }
 
@@ -478,6 +533,273 @@
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── UPLOAD BUTTON ─── */
+.uploadBtn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #e9434a;
+  background: #fff;
+  color: #e9434a;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.uploadBtn:hover {
+  background: #e9434a;
+  color: #fff;
+}
+
+/* ─── UPLOAD MODAL ─── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+}
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.modalHeader h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+.modalClose {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.modalClose:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+.modalBody {
+  padding: 20px;
+}
+.modalHint {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+.dropZone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.dropZone:hover,
+.dropZoneActive {
+  border-color: #e9434a;
+  background: #fef2f2;
+  color: #e9434a;
+}
+.dropZoneFilled {
+  border-color: #22c55e;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+.fileInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.fileName {
+  font-weight: 600;
+  color: #16a34a;
+}
+.uploadResultSuccess {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #166534;
+}
+.uploadResultError {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+.uploadErrors {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #92400e;
+}
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+.modalBtnSecondary {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.modalBtnSecondary:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+.modalBtnPrimary {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #e9434a;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.modalBtnPrimary:hover:not(:disabled) {
+  background: #dc2626;
+}
+.modalBtnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── TABLE EXPAND OVERLAY ─── */
+.tableCardClickable {
+  cursor: pointer;
+}
+.tableCardClickable:hover {
+  box-shadow: 0 4px 16px rgba(233, 67, 74, 0.15);
+}
+.tableExpandOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.tableExpandModal {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 95vw;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: expandIn 0.25s ease;
+}
+@keyframes expandIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.tableExpandHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #fff, #fef2f2);
+}
+.tableExpandHeader h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+.tableExpandClose {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.tableExpandClose:hover {
+  background: #e9434a;
+  color: #fff;
+}
+.tableExpandBody {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+.tcExpandBtn {
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: all 0.12s;
+  line-height: 1;
+}
+.tcExpandBtn:hover {
+  background: #fef2f2;
+  color: #e9434a;
+  border-color: rgba(233, 67, 74, 0.3);
+}
+.tableCard .tcExpandBtn { font-size: 10px; padding: 1px 4px; }
 
 /* ─── RESPONSIVE ─── */
 @media (max-width: 1200px) {

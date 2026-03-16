@@ -1,0 +1,21 @@
+video_id,client_id,channel_name,channel_id,user_name,user_id,input_type_name,input_type_id,output_type_name,output_type_id,language_name,language_id,duration,uploaded_at,processed_at,published_at,published_flag,published_platform,published_url
+V2001,C1,NDTV News,CH101,Amit Sharma,U101,Interview,IT1,Shorts,OT1,Hindi,L1,00:05:20,05-01-2024 10:15,05-01-2024 10:20,05-01-2024 11:00,true,YouTube,https://youtube.com/v2001
+V2002,C1,NDTV News,CH101,Priya Mehta,U102,Speech,IT2,Reels,OT2,English,L2,00:04:40,07-01-2024 11:00,07-01-2024 11:15,07-01-2024 11:45,true,Instagram,https://instagram.com/v2002
+V2003,C1,NDTV Sports,CH102,Rahul Verma,U103,Debate,IT3,Clips,OT3,Hindi,L1,00:06:30,12-01-2024 09:30,12-01-2024 09:45,12-01-2024 10:20,true,YouTube,https://youtube.com/v2003
+V2004,C1,NDTV Sports,CH102,Amit Sharma,U101,Speech,IT2,Shorts,OT1,Tamil,L3,00:03:50,15-01-2024 14:10,15-01-2024 14:30,,false,,
+V2005,C2,Republic News,CH201,Karan Singh,U201,Interview,IT1,Reels,OT2,English,L2,00:05:50,20-01-2024 10:05,20-01-2024 10:20,20-01-2024 11:00,true,Instagram,https://instagram.com/v2005
+V2006,C2,Republic News,CH201,Sneha Iyer,U202,Podcast,IT4,Highlights,OT4,Hindi,L1,00:10:00,22-01-2024 11:30,22-01-2024 12:00,22-01-2024 12:45,true,YouTube,https://youtube.com/v2006
+V2007,C2,Republic Business,CH202,Arjun Nair,U203,Press Conference,IT5,Summary,OT5,English,L2,00:09:10,25-01-2024 09:20,25-01-2024 09:50,25-01-2024 10:30,true,LinkedIn,https://linkedin.com/v2007
+V2008,C2,Republic Business,CH202,Karan Singh,U201,Debate,IT3,Shorts,OT1,Hindi,L1,00:04:20,28-01-2024 14:30,28-01-2024 15:00,28-01-2024 15:20,true,YouTube,https://youtube.com/v2008
+V2009,C3,Times Now,CH301,Neha Kapoor,U301,Speech,IT2,Reels,OT2,English,L2,00:04:50,02-02-2024 10:40,02-02-2024 11:10,02-02-2024 12:00,true,Instagram,https://instagram.com/v2009
+V2010,C3,Times Now,CH301,Aditya Roy,U302,Interview,IT1,Clips,OT3,Hindi,L1,00:07:10,05-02-2024 12:15,05-02-2024 12:45,05-02-2024 13:20,true,YouTube,https://youtube.com/v2010
+V2011,C3,Times Now Tech,CH302,Ritika Das,U303,Tech Review,IT6,Highlights,OT4,English,L2,00:08:10,07-02-2024 09:10,07-02-2024 09:40,07-02-2024 10:00,true,YouTube,https://youtube.com/v2011
+V2012,C3,Times Now Tech,CH302,Neha Kapoor,U301,Tech Review,IT6,Summary,OT5,Hindi,L1,00:07:30,09-02-2024 11:00,09-02-2024 11:20,,false,,
+V2013,C1,NDTV News,CH101,Priya Mehta,U102,Speech,IT2,Reels,OT2,English,L2,00:05:10,12-02-2024 13:00,12-02-2024 13:15,12-02-2024 13:45,true,Instagram,https://instagram.com/v2013
+V2014,C1,NDTV News,CH101,Amit Sharma,U101,Interview,IT1,Shorts,OT1,Hindi,L1,00:04:55,15-02-2024 10:00,15-02-2024 10:20,15-02-2024 11:00,true,YouTube,https://youtube.com/v2014
+V2015,C2,Republic News,CH201,Sneha Iyer,U202,Podcast,IT4,Highlights,OT4,Hindi,L1,00:09:45,18-02-2024 09:30,18-02-2024 10:00,18-02-2024 10:40,true,YouTube,https://youtube.com/v2015
+V2016,C2,Republic Business,CH202,Arjun Nair,U203,Press Conference,IT5,Summary,OT5,English,L2,00:08:40,21-02-2024 14:00,21-02-2024 14:20,21-02-2024 15:00,true,LinkedIn,https://linkedin.com/v2016
+V2017,C3,Times Now,CH301,Aditya Roy,U302,Speech,IT2,Reels,OT2,Hindi,L1,00:04:25,24-02-2024 12:10,24-02-2024 12:30,24-02-2024 13:10,true,Instagram,https://instagram.com/v2017
+V2018,C3,Times Now Tech,CH302,Ritika Das,U303,Tech Review,IT6,Highlights,OT4,English,L2,00:07:40,27-02-2024 11:20,27-02-2024 11:40,27-02-2024 12:30,true,YouTube,https://youtube.com/v2018
+V2019,C1,NDTV News,CH101,Amit Sharma,U101,Interview,IT1,Shorts,OT1,Hindi,L1,00:05:00,03-03-2024 10:00,03-03-2024 10:20,03-03-2024 11:00,true,YouTube,https://youtube.com/v2019
+V2020,C1,NDTV Sports,CH102,Rahul Verma,U103,Debate,IT3,Clips,OT3,Hindi,L1,00:06:10,05-03-2024 09:30,05-03-2024 09:50,05-03-2024 10:30,true,YouTube,https://youtube.com/v2020

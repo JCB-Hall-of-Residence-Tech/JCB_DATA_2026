@@ -21,14 +21,6 @@ CREATE TABLE IF NOT EXISTS users (
   CONSTRAINT fk_users_client FOREIGN KEY (client_id) REFERENCES clients(client_id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS channels (
-  client_id VARCHAR(20) NOT NULL,
-  channel_id VARCHAR(30) NOT NULL,
-  channel_name VARCHAR(100) NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (client_id, channel_id),
-  CONSTRAINT fk_channels_client FOREIGN KEY (client_id) REFERENCES clients(client_id) ON DELETE CASCADE
-);
 
 -- ---------------------------------------------------------------------------
 -- Fact table: videos (references clients, channels, users)
@@ -238,3 +230,17 @@ CREATE TABLE IF NOT EXISTS channel_wise_publishing_duration (
   CONSTRAINT fk_pub_duration_client FOREIGN KEY (client_id) REFERENCES clients(client_id) ON DELETE CASCADE,
   CONSTRAINT fk_pub_duration_channel FOREIGN KEY (client_id, channel_id) REFERENCES channels(client_id, channel_id) ON DELETE CASCADE
 );
+
+-- ---------------------------------------------------------------------------
+-- Raw uploads staging (stores all rows as JSONB; dynamic columns preserved)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS raw_uploads (
+  id SERIAL PRIMARY KEY,
+  client_id VARCHAR(20),
+  uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+  data JSONB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_raw_uploads_client ON raw_uploads(client_id);
+CREATE INDEX IF NOT EXISTS idx_raw_uploads_uploaded_at ON raw_uploads(uploaded_at);

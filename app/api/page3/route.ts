@@ -33,7 +33,7 @@ export async function GET() {
         ORDER BY created_count DESC
       `),
 
-      // 2. Sankey Flow – videos joined with channels for channel_name
+      // 2. Sankey Flow – videos joined with channel_processing_summary (case-insensitive grouping)
       client.query<{
         client_id: string;
         source: string;
@@ -41,27 +41,27 @@ export async function GET() {
         value: number;
       }>(`
         SELECT v.client_id,
-               v.input_type_name AS source,
-               c.channel_name AS target,
+               INITCAP(LOWER(TRIM(v.input_type_name))) AS source,
+               INITCAP(LOWER(TRIM(cs.channel_name))) AS target,
                COUNT(*)::int AS value
         FROM videos v
-        JOIN channels c ON c.client_id = v.client_id AND c.channel_id = v.channel_id
+        JOIN channel_processing_summary cs ON cs.client_id = v.client_id AND cs.channel_id = v.channel_id
         WHERE v.input_type_name IS NOT NULL
-          AND c.channel_name IS NOT NULL
-        GROUP BY v.client_id, v.input_type_name, c.channel_name
+          AND cs.channel_name IS NOT NULL
+        GROUP BY v.client_id, LOWER(TRIM(v.input_type_name)), LOWER(TRIM(cs.channel_name))
         HAVING COUNT(*) > 0
 
         UNION ALL
 
         SELECT v.client_id,
-               c.channel_name AS source,
-               v.output_type_name AS target,
+               INITCAP(LOWER(TRIM(cs.channel_name))) AS source,
+               INITCAP(LOWER(TRIM(v.output_type_name))) AS target,
                COUNT(*)::int AS value
         FROM videos v
-        JOIN channels c ON c.client_id = v.client_id AND c.channel_id = v.channel_id
-        WHERE c.channel_name IS NOT NULL
+        JOIN channel_processing_summary cs ON cs.client_id = v.client_id AND cs.channel_id = v.channel_id
+        WHERE cs.channel_name IS NOT NULL
           AND v.output_type_name IS NOT NULL
-        GROUP BY v.client_id, c.channel_name, v.output_type_name
+        GROUP BY v.client_id, LOWER(TRIM(cs.channel_name)), LOWER(TRIM(v.output_type_name))
         HAVING COUNT(*) > 0
 
         ORDER BY value DESC
@@ -108,37 +108,43 @@ export async function GET() {
         ORDER BY published_count DESC
       `),
 
-      // 4. Platform × Output Type Stacked – all output types across all platforms
+      // 4. Platform × Output Type Stacked (case-insensitive grouping)
       client.query<{
         platform: string;
         output_type: string;
         cnt: number;
       }>(`
         WITH all_output_types AS (
-          SELECT DISTINCT output_type_name FROM videos WHERE output_type_name IS NOT NULL
+          SELECT DISTINCT INITCAP(LOWER(TRIM(output_type_name))) AS output_type_name
+          FROM videos WHERE output_type_name IS NOT NULL
         ),
         all_platforms AS (
-          SELECT DISTINCT published_platform FROM videos WHERE published_flag AND published_platform IS NOT NULL
+          SELECT DISTINCT INITCAP(LOWER(TRIM(published_platform))) AS published_platform
+          FROM videos WHERE published_flag AND published_platform IS NOT NULL
         ),
         combos AS (
           SELECT p.published_platform AS platform, o.output_type_name AS output_type
           FROM all_platforms p CROSS JOIN all_output_types o
+        ),
+        counts AS (
+          SELECT
+            INITCAP(LOWER(TRIM(published_platform))) AS platform,
+            INITCAP(LOWER(TRIM(output_type_name))) AS output_type,
+            COUNT(*)::int AS cnt
+          FROM videos
+          WHERE published_flag AND published_platform IS NOT NULL AND output_type_name IS NOT NULL
+          GROUP BY LOWER(TRIM(published_platform)), LOWER(TRIM(output_type_name))
         )
         SELECT
           c.platform,
           c.output_type,
           COALESCE(counts.cnt, 0)::int AS cnt
         FROM combos c
-        LEFT JOIN (
-          SELECT published_platform AS platform, output_type_name AS output_type, COUNT(*)::int AS cnt
-          FROM videos
-          WHERE published_flag AND published_platform IS NOT NULL AND output_type_name IS NOT NULL
-          GROUP BY published_platform, output_type_name
-        ) counts ON c.platform = counts.platform AND c.output_type = counts.output_type
+        LEFT JOIN counts ON c.platform = counts.platform AND c.output_type = counts.output_type
         ORDER BY c.platform, c.output_type
       `),
 
-      // 5. Production Velocity – avg turnaround by platform
+      // 5. Production Velocity – avg turnaround by platform (case-insensitive grouping)
       client.query<{
         group_name: string;
         avg_hours: number;
@@ -149,7 +155,7 @@ export async function GET() {
         q3_hours: number;
       }>(`
         SELECT
-          published_platform AS group_name,
+          INITCAP(LOWER(TRIM(published_platform))) AS group_name,
           ROUND(AVG(EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600)::numeric, 1) AS avg_hours,
           ROUND(MIN(EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600)::numeric, 1) AS min_hours,
           ROUND(MAX(EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600)::numeric, 1) AS max_hours,
@@ -167,7 +173,7 @@ export async function GET() {
           AND published_at IS NOT NULL
           AND uploaded_at IS NOT NULL
           AND published_platform IS NOT NULL
-        GROUP BY published_platform
+        GROUP BY LOWER(TRIM(published_platform))
         ORDER BY avg_hours DESC
       `),
     ]);

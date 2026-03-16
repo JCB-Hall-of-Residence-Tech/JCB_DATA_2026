@@ -227,9 +227,61 @@ function aggregateLinks(links: SankeyLink[]): SankeyLink[] {
     .sort((a, b) => b.value - a.value);
 }
 
+function CollapsibleColumn({
+  label,
+  color,
+  count,
+  collapsed,
+  onToggle,
+  borderRight,
+  children,
+}: {
+  label: string;
+  color: string;
+  count: number;
+  collapsed: boolean;
+  onToggle: () => void;
+  borderRight?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="flex flex-1 flex-col px-2.5 py-3"
+      style={{ borderRight: borderRight ? "1px solid #e5e7eb" : undefined }}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="mb-2 flex w-full shrink-0 items-center gap-1.5 px-1 text-left hover:opacity-80"
+      >
+        <svg
+          className={`h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform ${collapsed ? "" : "rotate-90"}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</span>
+        <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">{count}</span>
+      </button>
+      {!collapsed && (
+        <div className="flex-1 space-y-1 overflow-y-auto">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SankeyFlow({ nodes, links, clientIds: propClientIds }: SankeyProps) {
   const [selected, setSelected] = useState<{ name: string; layer: FlowLayer } | null>(null);
   const [clientFilter, setClientFilter] = useState<string>("all");
+  const [inputsCollapsed, setInputsCollapsed] = useState(false);
+  const [channelsCollapsed, setChannelsCollapsed] = useState(false);
+  const [outputsCollapsed, setOutputsCollapsed] = useState(false);
 
   if (links.length === 0) {
     return (
@@ -416,41 +468,35 @@ export function SankeyFlow({ nodes, links, clientIds: propClientIds }: SankeyPro
           className="flex shrink-0 gap-0"
           style={{ width: selected ? "38%" : "100%", transition: "width 0.2s" }}
         >
-          {/* Input Types */}
-          <div className="flex flex-1 flex-col border-r border-zinc-100 px-2.5 py-3">
-            <div className="mb-2 flex shrink-0 items-center gap-1.5 px-1">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: LAYER_COLORS.input }} />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Inputs</span>
-              <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">{sortedInputs.length}</span>
-            </div>
-            <div className="flex-1 space-y-1 overflow-y-auto">
-              {sortedInputs.map((n) => pill(n, "input"))}
-            </div>
-          </div>
-
-          {/* Channels */}
-          <div className="flex flex-1 flex-col border-r border-zinc-100 px-2.5 py-3">
-            <div className="mb-2 flex shrink-0 items-center gap-1.5 px-1">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: LAYER_COLORS.channel }} />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Channels</span>
-              <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">{sortedChannels.length}</span>
-            </div>
-            <div className="flex-1 space-y-1 overflow-y-auto">
-              {sortedChannels.map((n) => pill(n, "channel"))}
-            </div>
-          </div>
-
-          {/* Output Types */}
-          <div className="flex flex-1 flex-col px-2.5 py-3" style={{ borderRight: selected ? "1px solid #e5e7eb" : "none" }}>
-            <div className="mb-2 flex shrink-0 items-center gap-1.5 px-1">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: LAYER_COLORS.output }} />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Outputs</span>
-              <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">{sortedOutputs.length}</span>
-            </div>
-            <div className="flex-1 space-y-1 overflow-y-auto">
-              {sortedOutputs.map((n) => pill(n, "output"))}
-            </div>
-          </div>
+          <CollapsibleColumn
+            label="Inputs"
+            color={LAYER_COLORS.input}
+            count={sortedInputs.length}
+            collapsed={inputsCollapsed}
+            onToggle={() => setInputsCollapsed((v) => !v)}
+          >
+            {sortedInputs.map((n) => pill(n, "input"))}
+          </CollapsibleColumn>
+          <CollapsibleColumn
+            label="Channels"
+            color={LAYER_COLORS.channel}
+            count={sortedChannels.length}
+            collapsed={channelsCollapsed}
+            onToggle={() => setChannelsCollapsed((v) => !v)}
+            borderRight
+          >
+            {sortedChannels.map((n) => pill(n, "channel"))}
+          </CollapsibleColumn>
+          <CollapsibleColumn
+            label="Outputs"
+            color={LAYER_COLORS.output}
+            count={sortedOutputs.length}
+            collapsed={outputsCollapsed}
+            onToggle={() => setOutputsCollapsed((v) => !v)}
+            borderRight={!!selected}
+          >
+            {sortedOutputs.map((n) => pill(n, "output"))}
+          </CollapsibleColumn>
         </div>
 
         {/* Detail panel */}

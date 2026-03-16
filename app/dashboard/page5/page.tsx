@@ -57,6 +57,23 @@ type Alert = {
   table: string;
 };
 
+function formatCellValue(val: unknown): string {
+  if (val === null || val === undefined) return "—";
+  if (typeof val === "object") {
+    if (Array.isArray(val)) return val.length ? JSON.stringify(val) : "—";
+    const keys = Object.keys(val as object);
+    if (keys.length === 0) return "—";
+    // Format duration-like objects { hours, minutes, seconds } or similar
+    const o = val as Record<string, unknown>;
+    if ("hours" in o || "minutes" in o || "seconds" in o) {
+      const h = Number(o.hours ?? 0), m = Number(o.minutes ?? 0), s = Math.floor(Number(o.seconds ?? 0));
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+    return JSON.stringify(val);
+  }
+  return String(val);
+}
+
 function formatColumnName(col: string) {
   return col
     .replace(/_/g, " ")
@@ -86,44 +103,270 @@ function exportCSV(columns: string[], rows: Row[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function CompactTable({ data }: { data: TableData | null }) {
+function UploadModal({
+  open,
+  onClose,
+  onSuccess,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState<{
+    success?: boolean;
+    rawInserted?: number;
+    videosInserted?: number;
+    rowsProcessed?: number;
+    error?: string;
+    details?: string;
+    errors?: string[];
+  } | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!file) return;
+    setUploading(true);
+    setResult(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload-data", {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setResult({ success: false, error: json.error, details: json.details });
+        return;
+      }
+      setResult({
+        success: true,
+        rawInserted: json.rawInserted,
+        videosInserted: json.videosInserted,
+        rowsProcessed: json.rowsProcessed,
+        errors: json.errors,
+      });
+      onSuccess();
+    } catch (err) {
+      setResult({
+        success: false,
+        error: "Upload failed",
+        details: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setFile(null);
+    setResult(null);
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className={s.modalOverlay} onClick={handleClose}>
+      <div className={s.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={s.modalHeader}>
+          <h3>Upload Dataset</h3>
+          <button type="button" className={s.modalClose} onClick={handleClose}>
+            ✕
+          </button>
+        </div>
+        <div className={s.modalBody}>
+          <p className={s.modalHint}>
+            Upload CSV, XLSX, or JSON. Required columns: client_id, channel_name (or channel), user_name (or user), video_id.
+          </p>
+          <div
+            className={`${s.dropZone} ${dragOver ? s.dropZoneActive : ""} ${file ? s.dropZoneFilled : ""}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files[0];
+              if (f && /\.(csv|xlsx|xls|json)$/i.test(f.name)) setFile(f);
+            }}
+          >
+            <input
+              type="file"
+              accept=".csv,.xlsx,.xls,.json"
+              className={s.fileInput}
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+            {file ? (
+              <span className={s.fileName}>{file.name}</span>
+            ) : (
+              <span>Drop file here or click to browse</span>
+            )}
+          </div>
+          {result && (
+            <div
+              className={
+                result.success ? s.uploadResultSuccess : s.uploadResultError
+              }
+            >
+              {result.success ? (
+                <>
+                  <p>
+                    ✓ {result.rowsProcessed} rows processed · {result.rawInserted} stored in raw_uploads ·{" "}
+                    {result.videosInserted} inserted into videos
+                  </p>
+                  {result.errors?.length ? (
+                    <p className={s.uploadErrors}>
+                      Some errors: {result.errors.slice(0, 3).join("; ")}
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <p>
+                  ✕ {result.error}: {result.details}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        <div className={s.modalFooter}>
+          <button type="button" className={s.modalBtnSecondary} onClick={handleClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={s.modalBtnPrimary}
+            onClick={handleSubmit}
+            disabled={!file || uploading}
+          >
+            {uploading ? "Uploading…" : "Upload"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompactTable({
+  data,
+  showFilters = true,
+}: {
+  data: TableData | null;
+  showFilters?: boolean;
+}) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+
   if (!data?.rows?.length) {
     return <div className={s.emptyState}>No data available</div>;
   }
+
   const columns = Object.keys(data.rows[0]);
+  const filterableColumns = columns.filter((col) => {
+    const uniq = new Set(data.rows.map((r) => String(r[col] ?? "")));
+    return uniq.size >= 2 && uniq.size <= 50;
+  });
+
+  let filteredRows = data.rows;
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase();
+    filteredRows = filteredRows.filter((row) =>
+      columns.some((col) => {
+        const v = row[col];
+        return v != null && String(v).toLowerCase().includes(term);
+      })
+    );
+  }
+  for (const col of filterableColumns) {
+    const val = columnFilters[col];
+    if (val) {
+      filteredRows = filteredRows.filter((row) => String(row[col] ?? "") === val);
+    }
+  }
+
+  const updateColumnFilter = (col: string, value: string) => {
+    setColumnFilters((prev) => (value ? { ...prev, [col]: value } : { ...prev, [col]: "" }));
+  };
+
   return (
-    <table className={s.dataTable}>
-      <thead>
-        <tr>
-          {columns.map((col) => (
-            <th key={col} title={formatColumnName(col)}>
-              {formatColumnName(col)}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {data.rows.map((row, idx) => (
-          <tr key={idx}>
-            {columns.map((col) => {
-              const val = row[col];
-              const display =
-                val === null || val === undefined ? "—" : String(val);
+    <div className={s.compactTableWrap}>
+      {showFilters && (
+        <div className={s.compactFilters}>
+          <div className={s.compactSearchWrap}>
+            <input
+              type="text"
+              className={s.compactSearch}
+              placeholder="Search…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {filterableColumns.slice(0, 3).map((col) => {
+            const options = [...new Set(data.rows.map((r) => String(r[col] ?? "")))].filter(Boolean).sort();
+            return (
+              <select
+                key={col}
+                className={s.compactFilterSelect}
+                value={columnFilters[col] ?? ""}
+                onChange={(e) => updateColumnFilter(col, e.target.value)}
+              >
+                <option value="">All {formatColumnName(col)}</option>
+                {options.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            );
+          })}
+        </div>
+      )}
+      <table className={s.dataTable}>
+        <thead>
+          <tr>
+            {columns.map((col) => (
+              <th key={col} title={formatColumnName(col)}>
+                {formatColumnName(col)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {filteredRows.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length} className={s.emptyCell}>
+                No rows match filters
+              </td>
+            </tr>
+          ) : (
+            filteredRows.map((row, idx) => (
+              <tr key={idx}>
+              {columns.map((col) => {
+              const display = formatCellValue(row[col]);
               return (
                 <td key={col} title={display}>
                   {display}
                 </td>
               );
             })}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
+const FILTER_COLUMNS = ["client_id", "channel_name", "channel_id", "user_name", "user_id", "published_platform", "input_type_name", "output_type_name", "language_name"];
+
 function VideosTable({ data }: { data: TableData }) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc" | "none">("none");
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
@@ -141,6 +384,7 @@ function VideosTable({ data }: { data: TableData }) {
 
   const allColumns = Object.keys(data.rows[0]);
   const activeColumns = allColumns.filter((c) => visibleColumns.has(c));
+  const availableFilterCols = FILTER_COLUMNS.filter((c) => allColumns.includes(c));
 
   let filteredRows = data.rows;
   if (searchTerm) {
@@ -151,6 +395,12 @@ function VideosTable({ data }: { data: TableData }) {
         return v != null && String(v).toLowerCase().includes(term);
       })
     );
+  }
+  for (const col of availableFilterCols) {
+    const val = columnFilters[col];
+    if (val) {
+      filteredRows = filteredRows.filter((row) => String(row[col] ?? "") === val);
+    }
   }
 
   if (sortCol && sortDir !== "none") {
@@ -222,6 +472,29 @@ function VideosTable({ data }: { data: TableData }) {
               </button>
             )}
           </div>
+          {availableFilterCols.map((col) => {
+            const options = [...new Set(data.rows.map((r) => String(r[col] ?? "")))].filter(Boolean).sort();
+            if (options.length > 100) return null;
+            return (
+              <select
+                key={col}
+                className={s.dtFilterSelect}
+                value={columnFilters[col] ?? ""}
+                onChange={(e) =>
+                  setColumnFilters((prev) =>
+                    e.target.value ? { ...prev, [col]: e.target.value } : { ...prev, [col]: "" }
+                  )
+                }
+              >
+                <option value="">All {formatColumnName(col)}</option>
+                {options.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            );
+          })}
         </div>
         <div className={s.dtToolbarRight}>
           <div style={{ position: "relative" }}>
@@ -306,13 +579,14 @@ function VideosTable({ data }: { data: TableData }) {
           <tbody>
             {renderRows.map((row, idx) => (
               <tr key={idx}>
-                {activeColumns.map((col) => (
-                  <td key={col} title={row[col]?.toString()}>
-                    {row[col] === null || row[col] === undefined
-                      ? "—"
-                      : String(row[col])}
-                  </td>
-                ))}
+                {activeColumns.map((col) => {
+                  const display = formatCellValue(row[col]);
+                  return (
+                    <td key={col} title={display}>
+                      {display}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
             {filteredRows.length > 200 && (
@@ -351,26 +625,30 @@ export default function Page5() {
   const [leftWidth, setLeftWidth] = useState(50);
   const [isResizingH, setIsResizingH] = useState(false);
   const [isResizingV, setIsResizingV] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [expandedTable, setExpandedTable] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/page5");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      setAlerts(json.alerts || []);
+      if (json.tables?.videos) setVideosData(json.tables.videos);
+      const sMap: Record<string, TableData> = {};
+      for (const t of ALL_SUMMARY_TABLES) {
+        if (json.tables?.[t]) sMap[t] = json.tables[t];
+      }
+      setSummaryDataMap(sMap);
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch("/api/page5");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        setAlerts(json.alerts || []);
-        if (json.tables?.videos) setVideosData(json.tables.videos);
-        const sMap: Record<string, TableData> = {};
-        for (const t of ALL_SUMMARY_TABLES) {
-          if (json.tables?.[t]) sMap[t] = json.tables[t];
-        }
-        setSummaryDataMap(sMap);
-      } catch (err) {
-        console.error("Failed to fetch dashboard data:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchData();
   }, []);
 
@@ -416,6 +694,44 @@ export default function Page5() {
 
   return (
     <>
+      <UploadModal
+        open={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={fetchData}
+      />
+      {expandedTable && (
+        <div
+          className={s.tableExpandOverlay}
+          onClick={() => setExpandedTable(null)}
+        >
+          <div
+            className={s.tableExpandModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={s.tableExpandHeader}>
+              <h2>
+                {expandedTable === "videos"
+                  ? "Videos"
+                  : TABLE_FULL_NAMES[expandedTable] || expandedTable}
+              </h2>
+              <button
+                type="button"
+                className={s.tableExpandClose}
+                onClick={() => setExpandedTable(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className={s.tableExpandBody}>
+              {expandedTable === "videos" ? (
+                <VideosTable data={videosData} />
+              ) : summaryDataMap[expandedTable] ? (
+                <CompactTable data={summaryDataMap[expandedTable]} showFilters />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
       <div className={`${s.loadingOverlay} ${!loading ? s.hidden : ""}`}>
         <div className={s.loadingSpinner}>
           <div className={s.spinner} />
@@ -508,9 +824,26 @@ export default function Page5() {
               <h2>
                 <span className={s.icon}>🎬</span> Videos
               </h2>
-              <span className={s.badge}>
-                {videosData.rowCount?.toLocaleString()} rows
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  className={s.tcExpandBtn}
+                  title="Expand"
+                  onClick={() => setExpandedTable("videos")}
+                >
+                  ⛶
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(true)}
+                  className={s.uploadBtn}
+                >
+                  ↑ Upload Data
+                </button>
+                <span className={s.badge}>
+                  {videosData.rowCount?.toLocaleString()} rows
+                </span>
+              </div>
             </div>
             <VideosTable data={videosData} />
           </div>
@@ -611,8 +944,9 @@ export default function Page5() {
                 return (
                   <div
                     key={t}
-                    className={s.tableCard}
+                    className={`${s.tableCard} ${s.tableCardClickable}`}
                     style={{ animationDelay: `${i * 0.03}s` }}
+                    onClick={() => setExpandedTable(t)}
                   >
                     <div
                       className={s.tableCardHeader}
@@ -623,11 +957,22 @@ export default function Page5() {
                       </h3>
                       <div className={s.tableCardActions}>
                         <button
+                          className={s.tcExpandBtn}
+                          title="Expand"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedTable(t);
+                          }}
+                        >
+                          ⛶
+                        </button>
+                        <button
                           className={s.tcExportBtn}
                           title="Download CSV"
-                          onClick={() =>
-                            exportCSV(columns, tableData.rows, t)
-                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            exportCSV(columns, tableData.rows, t);
+                          }}
                         >
                           ↓
                         </button>
@@ -637,7 +982,7 @@ export default function Page5() {
                       </div>
                     </div>
                     <div className={s.tableScrollContainer}>
-                      <CompactTable data={tableData} />
+                      <CompactTable data={tableData} showFilters />
                     </div>
                   </div>
                 );
