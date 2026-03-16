@@ -67,7 +67,7 @@ export async function GET() {
         ORDER BY value DESC
       `),
 
-      // 3a. Clients ranked by published count
+      // 3a. Clients ranked by published count (from channel_processing_summary)
       client.query<{
         client_id: string;
         published_count: number;
@@ -81,7 +81,7 @@ export async function GET() {
           CASE WHEN COALESCE(SUM(created_count), 0) = 0 THEN 0
                ELSE ROUND(COALESCE(SUM(published_count), 0)::numeric / SUM(created_count) * 100, 1)
           END AS publish_rate
-        FROM user_processing_summary
+        FROM channel_processing_summary
         WHERE client_id IS NOT NULL
         GROUP BY client_id
         ORDER BY published_count DESC

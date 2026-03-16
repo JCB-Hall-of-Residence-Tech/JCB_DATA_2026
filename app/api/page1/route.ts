@@ -30,14 +30,20 @@ export async function GET() {
       efficiencyRes,
       topFormatsRes,
       dataHealthRes,
+      timeToMarketMonthlyRes,
+      contentWasteMonthlyRes,
+      clientConcentrationMonthlyRes,
+      topOutputByMonthRes,
     ] = await Promise.all([
       // 1. Human Hours Saved: SUM(total_uploaded_duration) * 3
       query(`
         SELECT COALESCE(SUM(
-          EXTRACT(EPOCH FROM (total_uploaded_duration)::interval)
+          CASE WHEN total_uploaded_duration IS NOT NULL AND TRIM(COALESCE(total_uploaded_duration::text, '')) != ''
+               THEN EXTRACT(EPOCH FROM (total_uploaded_duration::text::interval))
+               ELSE NULL
+          END
         ), 0)::numeric AS total_seconds
         FROM monthly_duration_summary
-        WHERE total_uploaded_duration IS NOT NULL AND total_uploaded_duration != ''
       `),
 
       // 2. Time-to-Market: AVG(published_at - uploaded_at)
@@ -53,23 +59,35 @@ export async function GET() {
       query(`
         WITH agg AS (
           SELECT
-            COALESCE(SUM(EXTRACT(EPOCH FROM (total_created_duration)::interval)), 0)::numeric AS created_sec,
-            COALESCE(SUM(EXTRACT(EPOCH FROM (total_published_duration)::interval)), 0)::numeric AS published_sec
+            COALESCE(SUM(
+              CASE WHEN total_created_duration IS NOT NULL AND TRIM(COALESCE(total_created_duration::text, '')) != ''
+                   THEN EXTRACT(EPOCH FROM (total_created_duration::text::interval))
+                   ELSE NULL
+              END
+            ), 0)::numeric AS created_sec,
+            COALESCE(SUM(
+              CASE WHEN total_published_duration IS NOT NULL AND TRIM(COALESCE(total_published_duration::text, '')) != ''
+                   THEN EXTRACT(EPOCH FROM (total_published_duration::text::interval))
+                   ELSE NULL
+              END
+            ), 0)::numeric AS published_sec
           FROM monthly_duration_summary
-          WHERE total_created_duration IS NOT NULL AND total_created_duration != ''
-             OR total_published_duration IS NOT NULL AND total_published_duration != ''
         )
         SELECT GREATEST(created_sec - published_sec, 0) AS waste_seconds FROM agg
       `),
 
-      // 4. Client Concentration Risk: top client duration / total
+      // 4. Client Concentration Risk: top client duration / total — from monthly_duration_summary
       query(`
         WITH by_client AS (
           SELECT
             client_id,
-            COALESCE(SUM(EXTRACT(EPOCH FROM (uploaded_duration_hh_mm_ss)::interval)), 0)::numeric AS client_sec
-          FROM channel_processing_summary
-          WHERE uploaded_duration_hh_mm_ss IS NOT NULL AND uploaded_duration_hh_mm_ss != ''
+            COALESCE(SUM(
+              CASE WHEN total_uploaded_duration IS NOT NULL AND TRIM(COALESCE(total_uploaded_duration::text, '')) != ''
+                   THEN EXTRACT(EPOCH FROM (total_uploaded_duration::text::interval))
+                   ELSE NULL
+              END
+            ), 0)::numeric AS client_sec
+          FROM monthly_duration_summary
           GROUP BY client_id
         ),
         totals AS (
@@ -81,31 +99,33 @@ export async function GET() {
           (SELECT total_sec FROM totals) AS total_sec
       `),
 
-      // 5. Total Uploaded (count + duration)
+      // 5. Total Uploaded (count + duration) — from monthly_processing_summary + monthly_duration_summary
       query(`
         SELECT COALESCE(SUM(total_uploaded), 0)::int AS total_uploaded
         FROM monthly_processing_summary
       `),
       query(`
         SELECT COALESCE(SUM(
-          EXTRACT(EPOCH FROM (total_uploaded_duration)::interval)
+          CASE WHEN total_uploaded_duration IS NOT NULL AND TRIM(COALESCE(total_uploaded_duration::text, '')) != ''
+               THEN EXTRACT(EPOCH FROM (total_uploaded_duration::text::interval))
+               ELSE NULL
+          END
         ), 0)::numeric AS total_seconds
         FROM monthly_duration_summary
-        WHERE total_uploaded_duration IS NOT NULL AND total_uploaded_duration != ''
       `),
 
-      // 6. Total AI-Generated Output
+      // 6. Total AI-Generated Output — from monthly_processing_summary
       query(`
         SELECT COALESCE(SUM(total_created), 0)::int AS total_created
         FROM monthly_processing_summary
       `),
 
-      // 7 & 9. Top output type (for multiplier we need both uploaded and created)
+      // 7 & 9. Top output type (from output_type_processing_summary)
       query(`
-        SELECT output_type_name, COUNT(*)::int AS cnt
-        FROM videos
-        WHERE published_flag = true AND output_type_name IS NOT NULL
-        GROUP BY output_type_name
+        SELECT output_type AS output_type_name, SUM(published_count)::int AS cnt
+        FROM output_type_processing_summary
+        WHERE published_count > 0
+        GROUP BY output_type
         ORDER BY cnt DESC
         LIMIT 1
       `),
@@ -124,9 +144,11 @@ export async function GET() {
       // Monthly duration for trend (human hours by month)
       query(`
         SELECT month, client_id,
-          EXTRACT(EPOCH FROM (total_uploaded_duration)::interval)::numeric AS total_seconds
+          CASE WHEN total_uploaded_duration IS NOT NULL AND TRIM(COALESCE(total_uploaded_duration::text, '')) != ''
+               THEN EXTRACT(EPOCH FROM (total_uploaded_duration::text::interval))::numeric
+               ELSE 0
+          END AS total_seconds
         FROM monthly_duration_summary
-        WHERE total_uploaded_duration IS NOT NULL AND total_uploaded_duration != ''
         ORDER BY month, client_id
       `),
 
@@ -141,9 +163,11 @@ export async function GET() {
       // Lifecycle by client (duration)
       query(`
         SELECT client_id, month,
-          EXTRACT(EPOCH FROM (total_uploaded_duration)::interval)::numeric AS total_seconds
+          CASE WHEN total_uploaded_duration IS NOT NULL AND TRIM(COALESCE(total_uploaded_duration::text, '')) != ''
+               THEN EXTRACT(EPOCH FROM (total_uploaded_duration::text::interval))::numeric
+               ELSE 0
+          END AS total_seconds
         FROM monthly_duration_summary
-        WHERE total_uploaded_duration IS NOT NULL AND total_uploaded_duration != ''
         ORDER BY month, client_id
       `),
 
@@ -184,6 +208,69 @@ export async function GET() {
         ORDER BY video_id
         LIMIT 100
       `),
+
+      // Monthly Time-to-Market (avg hours by month)
+      query(`
+        SELECT TO_CHAR(published_at, 'YYYY-MM') AS month,
+          ROUND(AVG(EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600)::numeric, 2) AS avg_hours
+        FROM videos
+        WHERE published_flag = true AND published_at IS NOT NULL AND uploaded_at IS NOT NULL
+        GROUP BY TO_CHAR(published_at, 'YYYY-MM')
+        ORDER BY month
+      `),
+
+      // Monthly Content Waste (created - published duration by month)
+      query(`
+        SELECT month,
+          GREATEST(
+            COALESCE(SUM(CASE WHEN total_created_duration IS NOT NULL AND TRIM(COALESCE(total_created_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (total_created_duration::text::interval)) ELSE 0 END), 0) -
+            COALESCE(SUM(CASE WHEN total_published_duration IS NOT NULL AND TRIM(COALESCE(total_published_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (total_published_duration::text::interval)) ELSE 0 END), 0),
+            0
+          )::numeric AS waste_seconds
+        FROM monthly_duration_summary
+        GROUP BY month
+        ORDER BY month
+      `),
+
+      // Monthly Client Concentration (top client % by month)
+      query(`
+        WITH by_month_client AS (
+          SELECT month, client_id,
+            COALESCE(SUM(CASE WHEN total_uploaded_duration IS NOT NULL AND TRIM(COALESCE(total_uploaded_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (total_uploaded_duration::text::interval)) ELSE 0 END), 0)::numeric AS client_sec
+          FROM monthly_duration_summary
+          GROUP BY month, client_id
+        ),
+        by_month AS (
+          SELECT month, SUM(client_sec) AS total_sec FROM by_month_client GROUP BY month
+        ),
+        top_per_month AS (
+          SELECT DISTINCT ON (bmc.month) bmc.month, bmc.client_sec AS top_sec, bm.total_sec
+          FROM by_month_client bmc
+          JOIN by_month bm ON bmc.month = bm.month
+          ORDER BY bmc.month, bmc.client_sec DESC
+        )
+        SELECT month, ROUND((top_sec / NULLIF(total_sec, 0) * 100)::numeric, 1) AS concentration_pct
+        FROM top_per_month
+        ORDER BY month
+      `),
+
+      // Monthly Top Output Type (per month)
+      query(`
+        WITH ranked AS (
+          SELECT TO_CHAR(published_at, 'YYYY-MM') AS month, output_type_name,
+            COUNT(*)::int AS cnt,
+            ROW_NUMBER() OVER (PARTITION BY TO_CHAR(published_at, 'YYYY-MM') ORDER BY COUNT(*) DESC) AS rn
+          FROM videos
+          WHERE published_flag = true AND published_at IS NOT NULL AND output_type_name IS NOT NULL
+          GROUP BY TO_CHAR(published_at, 'YYYY-MM'), output_type_name
+        )
+        SELECT month, output_type_name AS top_output
+        FROM ranked WHERE rn = 1
+        ORDER BY month
+      `),
     ]);
 
     // Parse results
@@ -220,6 +307,23 @@ export async function GET() {
     const prevUploaded = Number(prevRow?.total_uploaded ?? 0);
     const prevPublished = Number(prevRow?.total_published ?? 0);
 
+    // Monthly KPI values (current + prev month)
+    const ttMarketRows = timeToMarketMonthlyRes.rows as { month: string; avg_hours: string }[];
+    const ttMarketCurrent = Number(ttMarketRows.find((r) => r.month === currentMonth)?.avg_hours ?? 0);
+    const ttMarketPrev = Number(ttMarketRows.find((r) => r.month === prevMonth)?.avg_hours ?? 0);
+
+    const wasteRows = contentWasteMonthlyRes.rows as { month: string; waste_seconds: string }[];
+    const wasteCurrentSec = Number(wasteRows.find((r) => r.month === currentMonth)?.waste_seconds ?? 0);
+    const wastePrevSec = Number(wasteRows.find((r) => r.month === prevMonth)?.waste_seconds ?? 0);
+
+    const ccRows = clientConcentrationMonthlyRes.rows as { month: string; concentration_pct: string }[];
+    const ccCurrentPct = Number(ccRows.find((r) => r.month === currentMonth)?.concentration_pct ?? 0);
+    const ccPrevPct = Number(ccRows.find((r) => r.month === prevMonth)?.concentration_pct ?? 0);
+
+    const topOutputRows = topOutputByMonthRes.rows as { month: string; top_output: string }[];
+    const topOutputCurrent = topOutputRows.find((r) => r.month === currentMonth)?.top_output ?? "—";
+    const topOutputPrev = topOutputRows.find((r) => r.month === prevMonth)?.top_output ?? "—";
+
     const currentCombined = currentUploaded + currentPublished;
     const prevCombined = prevUploaded + prevPublished;
     const popGrowthPct =
@@ -238,6 +342,8 @@ export async function GET() {
       humanHoursPrev > 0 ? ((humanHoursCurrent * 3 - humanHoursPrev * 3) / (humanHoursPrev * 3)) * 100 : 0;
 
     const aiMultiplier = totalUploadedCount > 0 ? totalCreated / totalUploadedCount : 0;
+    const currentMonthMultiplier = currentUploaded > 0 ? (currentRow ? Number(currentRow.total_created ?? 0) : 0) / currentUploaded : 0;
+    const prevMonthMultiplier = prevUploaded > 0 ? (prevRow ? Number(prevRow.total_created ?? 0) : 0) / prevUploaded : 0;
 
     // Build lifecycle trend by client
     const lifecycleCountRows = lifecycleCountRes.rows as { client_id: string; month: string; total_uploaded: string }[];
@@ -304,43 +410,79 @@ export async function GET() {
       issue_type: r.issue_type,
     }));
 
-    // Trend for time-to-market: compare current vs prev month avg
-    const timeToMarketTrendPct = 0; // Would need per-month velocity query - skip for now
-    const contentWasteTrendPct = 0;
-    const clientConcentrationTrendPct = 0;
+    // Trend % (current vs prev month)
+    const timeToMarketTrendPct = ttMarketPrev > 0 ? ((ttMarketPrev - ttMarketCurrent) / ttMarketPrev) * 100 : 0; // lower is better
+    const contentWasteTrendPct = wastePrevSec > 0 ? ((wasteCurrentSec - wastePrevSec) / wastePrevSec) * 100 : 0; // lower is better
+    const clientConcentrationTrendPct = ccPrevPct > 0 ? ((ccPrevPct - ccCurrentPct) / ccPrevPct) * 100 : 0; // lower is better
     const totalUploadedTrendPct = prevUploaded > 0 ? ((currentUploaded - prevUploaded) / prevUploaded) * 100 : 0;
     const totalCreatedTrendPct = prevRow ? (Number(prevRow.total_created) > 0 ? ((currentRow ? Number(currentRow.total_created) : 0) - Number(prevRow.total_created)) / Number(prevRow.total_created) * 100 : 0) : 0;
-    const aiMultiplierTrendPct = 0; // Derived metric
+    const aiMultiplierTrendPct = prevMonthMultiplier > 0 ? ((currentMonthMultiplier - prevMonthMultiplier) / prevMonthMultiplier) * 100 : 0;
+
+    const humanHoursPrevFormatted = formatDuration(humanHoursPrev * 3);
+    const humanHoursCurrentFormatted = formatDuration(humanHoursCurrent * 3);
+    const currentMonthUploadedDurationFormatted = formatDuration(humanHoursCurrent);
+    const prevMonthLabel = prevMonth || "previous month";
+    const currentMonthLabel = currentMonth || "current month";
+    // Format month for display: "2024-02" -> "Feb 2024"
+    const formatMonthLabel = (m: string) => {
+      if (!m || m.length < 7 || !m.includes("-")) return m;
+      const [y, mo] = m.split("-");
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const monthName = months[parseInt(mo, 10) - 1] || mo;
+      return `${monthName} ${y}`;
+    };
 
     const response = {
       kpis: {
         humanHoursSaved: Math.round(humanHoursSaved / 3600),
         humanHoursSavedFormatted: formatDuration(humanHoursSaved),
         humanHoursTrendPct,
+        humanHoursCurrentFormatted,
+        humanHoursPrevFormatted,
 
         timeToMarketHours: Math.round(timeToMarketHours * 10) / 10,
         timeToMarketTrendPct,
+        timeToMarketCurrentHours: ttMarketCurrent,
+        timeToMarketPrevHours: ttMarketPrev,
 
         contentWasteFormatted: formatDuration(contentWasteSec),
         contentWasteSeconds: contentWasteSec,
         contentWasteTrendPct,
+        contentWasteCurrentFormatted: formatDuration(wasteCurrentSec),
+        contentWastePrevFormatted: formatDuration(wastePrevSec),
 
         clientConcentrationPct: Math.round(clientConcentrationPct * 10) / 10,
         clientConcentrationTrendPct,
+        clientConcentrationCurrentPct: ccCurrentPct,
+        clientConcentrationPrevPct: ccPrevPct,
 
         totalUploadedCount,
         totalUploadedDurationFormatted: formatDuration(totalUploadedDurationSec),
         totalUploadedTrendPct,
+        currentMonthUploaded: currentUploaded,
+        currentMonthUploadedDurationFormatted,
+        prevMonthUploaded: prevUploaded,
+        currentMonthCreated: currentRow ? Number(currentRow.total_created ?? 0) : 0,
+        prevMonthCreated: prevRow ? Number(prevRow.total_created ?? 0) : 0,
 
         totalCreated,
         totalCreatedTrendPct,
 
         aiContentMultiplier: Math.round(aiMultiplier * 10) / 10,
         aiMultiplierTrendPct,
+        currentMonthMultiplier: Math.round(currentMonthMultiplier * 10) / 10,
+        prevMonthMultiplier: Math.round(prevMonthMultiplier * 10) / 10,
 
         periodOverPeriodGrowthPct: Math.round(popGrowthPct * 10) / 10,
+        currentMonthCombined: currentCombined,
+        prevMonthCombined: prevCombined,
 
         topPerformingOutputType,
+        topOutputCurrentMonth: topOutputCurrent,
+        topOutputPrevMonth: topOutputPrev,
+
+        prevMonthLabel: formatMonthLabel(prevMonthLabel),
+        currentMonthLabel: formatMonthLabel(currentMonthLabel),
       },
       lifecycleTrend: { byClient: byClient, clients },
       pipelineStats: {

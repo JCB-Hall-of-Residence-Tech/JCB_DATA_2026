@@ -40,9 +40,15 @@ export default function LifecycleTrendChart({ data }: LifecycleTrendChartProps) 
     });
   };
 
+  // Fixed color per client (by index in full clients list) so buttons match chart lines
+  const getClientColor = (clientId: string) => {
+    const idx = data.clients.indexOf(clientId);
+    return CHART_COLORS[idx % CHART_COLORS.length];
+  };
+
   const datasets = data.clients
     .filter((c) => selectedClients.has(c))
-    .map((clientId, i) => {
+    .map((clientId) => {
       const clientRows = data.byClient[clientId] ?? [];
       const valueByMonth = new Map(clientRows.map((r) => [r.month, r]));
       const values = allMonths.map((m) => {
@@ -50,16 +56,17 @@ export default function LifecycleTrendChart({ data }: LifecycleTrendChartProps) 
         if (!row) return 0;
         return yAxisMode === "count" ? row.count : row.duration / 3600;
       });
+      const color = getClientColor(clientId);
       return {
         label: clientId,
         data: values,
-        borderColor: CHART_COLORS[i % CHART_COLORS.length],
-        backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + "15",
+        borderColor: color,
+        backgroundColor: color + "15",
         fill: true,
         tension: 0.4,
         borderWidth: 2.5,
         pointRadius: 4,
-        pointBackgroundColor: CHART_COLORS[i % CHART_COLORS.length],
+        pointBackgroundColor: color,
         pointBorderColor: "#fff",
         pointBorderWidth: 2,
         pointHoverRadius: 6,
@@ -138,24 +145,42 @@ export default function LifecycleTrendChart({ data }: LifecycleTrendChartProps) 
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
             Clients:
           </span>
-          {data.clients.map((clientId) => (
-            <label
-              key={clientId}
-              className={`flex items-center gap-2 text-xs font-medium px-2.5 py-1 rounded-md border cursor-pointer transition-all ${
-                selectedClients.has(clientId)
-                  ? "border-red-300 bg-red-50 text-red-700"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={selectedClients.has(clientId)}
-                onChange={() => toggleClient(clientId)}
-                className="h-3 w-3 rounded accent-red-500"
-              />
-              {clientId}
-            </label>
-          ))}
+          {data.clients.map((clientId) => {
+            const color = getClientColor(clientId);
+            const isSelected = selectedClients.has(clientId);
+            return (
+              <label
+                key={clientId}
+                className={`flex items-center gap-2 text-xs font-medium px-2.5 py-1 rounded-md border cursor-pointer transition-all ${
+                  isSelected
+                    ? "border-current"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                }`}
+                style={
+                  isSelected
+                    ? {
+                        borderColor: color,
+                        backgroundColor: color + "18",
+                        color: color,
+                      }
+                    : undefined
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleClient(clientId)}
+                  className="h-3 w-3 rounded"
+                  style={isSelected ? { accentColor: color } : undefined}
+                />
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: color }}
+                />
+                {clientId}
+              </label>
+            );
+          })}
         </div>
       </div>
       <div className="h-[200px] sm:h-[240px]">

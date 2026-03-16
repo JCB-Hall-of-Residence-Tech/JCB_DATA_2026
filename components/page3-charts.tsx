@@ -135,20 +135,29 @@ export function EfficiencyMatrix({ data }: { data: EfficiencyPoint[] }) {
           >
             All
           </button>
-          {clientIds.map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setSelectedClient(id)}
-              className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                selectedClient === id
-                  ? "bg-red-600 text-white"
-                  : "border border-zinc-200 bg-white text-zinc-600 hover:bg-red-50"
-              }`}
-            >
-              {id}
-            </button>
-          ))}
+          {clientIds.map((id, i) => {
+            const color = PALETTE[i % PALETTE.length];
+            const isSelected = selectedClient === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setSelectedClient(id)}
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors border"
+                style={
+                  isSelected
+                    ? { backgroundColor: color, color: "#fff", borderColor: color }
+                    : { borderColor: "#e4e4e7", backgroundColor: "#fff", color: "#71717a" }
+                }
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: isSelected ? "#fff" : color }}
+                />
+                {id}
+              </button>
+            );
+          })}
         </div>
       </div>
       <div className="min-h-0 flex-1" style={{ minHeight: 240 }}>
@@ -173,7 +182,20 @@ export function EfficiencyMatrix({ data }: { data: EfficiencyPoint[] }) {
             />
             <ZAxis dataKey="created_count" range={[60, 400]} />
             <Tooltip content={<EfficiencyTooltip />} cursor={{ strokeDasharray: "3 3" }} />
-            <Scatter data={filtered} shape="circle" fill="#ef4444" fillOpacity={0.65} />
+            {selectedClient === "all"
+              ? clientIds.map((id, i) => {
+                  const clientData = filtered.filter((d) => d.client_id === id);
+                  return (
+                    <Scatter
+                      key={id}
+                      data={clientData}
+                      shape="circle"
+                      fill={PALETTE[i % PALETTE.length]}
+                      fillOpacity={0.65}
+                    />
+                  );
+                })
+              : <Scatter data={filtered} shape="circle" fill={PALETTE[clientIds.indexOf(selectedClient) % PALETTE.length]} fillOpacity={0.65} />}
           </ScatterChart>
         </ResponsiveContainer>
       </div>

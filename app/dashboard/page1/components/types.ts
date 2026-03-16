@@ -2,30 +2,52 @@ export interface Page1KPIs {
   humanHoursSaved: number;
   humanHoursSavedFormatted: string;
   humanHoursTrendPct: number;
+  humanHoursCurrentFormatted?: string;
+  humanHoursPrevFormatted?: string;
 
   timeToMarketHours: number;
   timeToMarketTrendPct: number;
+  timeToMarketCurrentHours?: number;
+  timeToMarketPrevHours?: number;
 
   contentWasteFormatted: string;
   contentWasteSeconds: number;
   contentWasteTrendPct: number;
+  contentWasteCurrentFormatted?: string;
+  contentWastePrevFormatted?: string;
 
   clientConcentrationPct: number;
   clientConcentrationTrendPct: number;
+  clientConcentrationCurrentPct?: number;
+  clientConcentrationPrevPct?: number;
 
   totalUploadedCount: number;
   totalUploadedDurationFormatted: string;
   totalUploadedTrendPct: number;
+  currentMonthUploaded?: number;
+  currentMonthUploadedDurationFormatted?: string;
+  prevMonthUploaded?: number;
+  currentMonthCreated?: number;
+  prevMonthCreated?: number;
 
   totalCreated: number;
   totalCreatedTrendPct: number;
 
   aiContentMultiplier: number;
   aiMultiplierTrendPct: number;
+  currentMonthMultiplier?: number;
+  prevMonthMultiplier?: number;
 
   periodOverPeriodGrowthPct: number;
+  currentMonthCombined?: number;
+  prevMonthCombined?: number;
 
   topPerformingOutputType: string;
+  topOutputCurrentMonth?: string;
+  topOutputPrevMonth?: string;
+
+  prevMonthLabel?: string;
+  currentMonthLabel?: string;
 }
 
 export interface LifecycleTrendData {

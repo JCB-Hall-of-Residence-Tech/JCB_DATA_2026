@@ -49,6 +49,8 @@ export async function GET(req: NextRequest) {
       clientFilter !== "all" ? ` WHERE client_id = $1` : "";
     const clientWhereAnd =
       clientFilter !== "all" ? ` AND v.client_id = $1` : "";
+    const clientWhereAndCps =
+      clientFilter !== "all" ? ` AND client_id = $1` : "";
     const params = clientFilter !== "all" ? [clientFilter] : [];
 
     const [
@@ -61,13 +63,19 @@ export async function GET(req: NextRequest) {
       monthlyRes,
       overallRes,
     ] = await Promise.all([
-      query("SELECT DISTINCT client_id FROM videos WHERE client_id IS NOT NULL ORDER BY client_id"),
+      query("SELECT DISTINCT client_id FROM channel_processing_summary WHERE client_id IS NOT NULL ORDER BY client_id"),
 
       query(
         `SELECT channel_name AS name,
                 SUM(uploaded_count) AS uploaded_count,
                 SUM(created_count) AS created_count,
-                SUM(published_count) AS published_count
+                SUM(published_count) AS published_count,
+                (SUM(CASE WHEN uploaded_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(uploaded_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (uploaded_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS uploaded_dur,
+                (SUM(CASE WHEN created_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(created_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (created_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS created_dur,
+                (SUM(CASE WHEN published_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(published_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (published_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS published_dur
          FROM channel_processing_summary
          ${clientWhere}
          GROUP BY channel_name
@@ -79,7 +87,13 @@ export async function GET(req: NextRequest) {
         `SELECT user_name AS name,
                 SUM(uploaded_count) AS uploaded_count,
                 SUM(created_count) AS created_count,
-                SUM(published_count) AS published_count
+                SUM(published_count) AS published_count,
+                (SUM(CASE WHEN uploaded_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(uploaded_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (uploaded_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS uploaded_dur,
+                (SUM(CASE WHEN created_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(created_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (created_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS created_dur,
+                (SUM(CASE WHEN published_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(published_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (published_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS published_dur
          FROM user_processing_summary
          ${clientWhere}
          GROUP BY user_name
@@ -91,7 +105,13 @@ export async function GET(req: NextRequest) {
         `SELECT input_type AS name,
                 SUM(uploaded_count) AS uploaded_count,
                 SUM(created_count) AS created_count,
-                SUM(published_count) AS published_count
+                SUM(published_count) AS published_count,
+                (SUM(CASE WHEN uploaded_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(uploaded_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (uploaded_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS uploaded_dur,
+                (SUM(CASE WHEN created_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(created_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (created_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS created_dur,
+                (SUM(CASE WHEN published_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(published_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (published_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS published_dur
          FROM input_type_processing_summary
          ${clientWhere}
          GROUP BY input_type
@@ -103,7 +123,13 @@ export async function GET(req: NextRequest) {
         `SELECT output_type AS name,
                 SUM(uploaded_count) AS uploaded_count,
                 SUM(created_count) AS created_count,
-                SUM(published_count) AS published_count
+                SUM(published_count) AS published_count,
+                (SUM(CASE WHEN uploaded_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(uploaded_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (uploaded_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS uploaded_dur,
+                (SUM(CASE WHEN created_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(created_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (created_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS created_dur,
+                (SUM(CASE WHEN published_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(published_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (published_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS published_dur
          FROM output_type_processing_summary
          ${clientWhere}
          GROUP BY output_type
@@ -115,7 +141,13 @@ export async function GET(req: NextRequest) {
         `SELECT language AS name,
                 SUM(uploaded_count) AS uploaded_count,
                 SUM(created_count) AS created_count,
-                SUM(published_count) AS published_count
+                SUM(published_count) AS published_count,
+                (SUM(CASE WHEN uploaded_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(uploaded_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (uploaded_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS uploaded_dur,
+                (SUM(CASE WHEN created_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(created_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (created_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS created_dur,
+                (SUM(CASE WHEN published_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(published_duration_hh_mm_ss::text, '')) != ''
+                     THEN EXTRACT(EPOCH FROM (published_duration_hh_mm_ss::text::interval)) ELSE 0 END) || ' seconds')::interval::text AS published_dur
          FROM language_processing_summary
          ${clientWhere}
          GROUP BY language
@@ -137,17 +169,15 @@ export async function GET(req: NextRequest) {
 
       query(
         `SELECT
-           COUNT(*) FILTER (WHERE v.uploaded_at IS NOT NULL) AS total_uploaded,
-           COUNT(*) FILTER (WHERE v.processed_at IS NOT NULL) AS total_processed,
-           COUNT(*) FILTER (WHERE v.published_flag = true) AS total_published,
-           AVG(
-             CASE WHEN v.duration IS NOT NULL
-                  THEN EXTRACT(EPOCH FROM v.duration::interval) / 60.0
-                  ELSE NULL
-             END
-           ) FILTER (WHERE v.published_flag = true) AS avg_dur
-         FROM videos v
-         WHERE 1=1 ${clientWhereAnd}`,
+           COALESCE(SUM(uploaded_count), 0)::int AS total_uploaded,
+           COALESCE(SUM(created_count), 0)::int AS total_processed,
+           COALESCE(SUM(published_count), 0)::int AS total_published,
+           CASE WHEN SUM(published_count) > 0
+           THEN SUM(CASE WHEN published_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(published_duration_hh_mm_ss::text, '')) != ''
+             THEN EXTRACT(EPOCH FROM (published_duration_hh_mm_ss::text::interval)) ELSE 0 END) / 60.0 / NULLIF(SUM(published_count), 0)
+           ELSE NULL END AS avg_dur
+         FROM channel_processing_summary
+         WHERE 1=1 ${clientWhereAndCps}`,
         params
       ),
     ]);
@@ -172,13 +202,13 @@ export async function GET(req: NextRequest) {
     }));
 
     const clientAggRes = await query(
-      `SELECT v.client_id AS name,
-              COUNT(*) FILTER (WHERE v.uploaded_at IS NOT NULL) AS uploaded_count,
-              COUNT(*) FILTER (WHERE v.processed_at IS NOT NULL) AS created_count,
-              COUNT(*) FILTER (WHERE v.published_flag = true) AS published_count
-       FROM videos v
-       GROUP BY v.client_id
-       ORDER BY COUNT(*) DESC`
+      `SELECT client_id AS name,
+              SUM(uploaded_count) AS uploaded_count,
+              SUM(created_count) AS created_count,
+              SUM(published_count) AS published_count
+       FROM channel_processing_summary
+       GROUP BY client_id
+       ORDER BY SUM(published_count) DESC`
     );
     const clientBreakdown = toBreakdown(clientAggRes.rows as SummaryRow[]);
 
