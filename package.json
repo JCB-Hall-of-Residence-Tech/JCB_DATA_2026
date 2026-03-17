@@ -6,11 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:groq": "node scripts/test-groq.js"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
     "chart.js": "^4.5.1",
     "next": "16.1.6",
+    "openai": "^6.31.0",
     "papaparse": "^5.5.3",
     "pg": "^8.13.0",
     "react": "19.2.3",
