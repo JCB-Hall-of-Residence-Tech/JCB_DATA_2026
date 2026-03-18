@@ -35,7 +35,6 @@ export default function Page2Dashboard() {
   const [dim2, setDim2] = useState<DimensionKey>("inputType");
   const [chartMode, setChartMode] = useState<ChartMode>("stacked");
   const [metric, setMetric] = useState<MetricKey>("uploaded_count");
-  const [analysisExpanded, setAnalysisExpanded] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -152,11 +151,7 @@ export default function Page2Dashboard() {
         }`}
       >
         {/* LEFT: Multi-Dimensional Analysis */}
-        <div
-          className={`rounded-2xl border border-gray-200 bg-white shadow-sm flex flex-col transition-all ${
-            analysisExpanded ? "max-h-none" : "max-h-[540px] overflow-hidden"
-          }`}
-        >
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm flex flex-col">
           <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold text-gray-900">
@@ -164,21 +159,13 @@ export default function Page2Dashboard() {
               </h2>
               <p className="text-[11px] text-gray-400 mt-0.5">
                 Pick any two dimensions to compare — charts show top items with
-                pagination
+                pagination. Full panel scrolls with the page — no internal
+                scrollbar.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setAnalysisExpanded((v) => !v)}
-              className="text-[11px] font-semibold px-3 py-1 rounded-full border border-red-200 bg-white text-red-600 hover:bg-red-50"
-            >
-              {analysisExpanded ? "Collapse" : "Expand"}
-            </button>
           </div>
           <div
-            className={`p-4 flex flex-col gap-4 flex-1 ${
-              analysisExpanded ? "overflow-visible" : "overflow-y-auto"
-            }`}
+            className="p-4 flex flex-col gap-4 flex-1 overflow-visible"
           >
             {/* Dimension pickers */}
             <div className="flex gap-3 items-end flex-wrap">
