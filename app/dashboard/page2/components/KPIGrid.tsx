@@ -1,9 +1,12 @@
 "use client";
 
+import InsightTrigger from "@/components/InsightTrigger";
 import type { KPIs } from "./types";
 
 interface KPIGridProps {
   kpis: KPIs;
+  page?: string;
+  filters?: Record<string, string>;
 }
 
 interface KPITile {
@@ -12,9 +15,10 @@ interface KPITile {
   unit: string;
   direction: "up" | "down";
   sub: string;
+  widgetId: string;
 }
 
-export default function KPIGrid({ kpis }: KPIGridProps) {
+export default function KPIGrid({ kpis, page = "page2", filters = {} }: KPIGridProps) {
   const tiles: KPITile[] = [
     {
       label: "Publish Rate",
@@ -22,6 +26,7 @@ export default function KPIGrid({ kpis }: KPIGridProps) {
       unit: "%",
       direction: kpis.publishRate >= 50 ? "up" : "down",
       sub: "Processed → Published",
+      widgetId: "kpi_publish_rate",
     },
     {
       label: "Process Rate",
@@ -29,6 +34,7 @@ export default function KPIGrid({ kpis }: KPIGridProps) {
       unit: "%",
       direction: kpis.processRate >= 70 ? "up" : "down",
       sub: "Uploaded → Processed",
+      widgetId: "kpi_process_rate",
     },
     {
       label: "Avg Duration",
@@ -36,6 +42,7 @@ export default function KPIGrid({ kpis }: KPIGridProps) {
       unit: " min",
       direction: "up",
       sub: "Per published video",
+      widgetId: "kpi_avg_duration",
     },
     {
       label: "Drop Gap",
@@ -43,6 +50,7 @@ export default function KPIGrid({ kpis }: KPIGridProps) {
       unit: "",
       direction: "down",
       sub: "Proc − Published count",
+      widgetId: "kpi_drop_gap",
     },
     {
       label: "Total Uploaded",
@@ -50,6 +58,7 @@ export default function KPIGrid({ kpis }: KPIGridProps) {
       unit: "",
       direction: "up",
       sub: "All uploaded videos",
+      widgetId: "kpi_total_uploaded",
     },
     {
       label: "Total Published",
@@ -57,6 +66,7 @@ export default function KPIGrid({ kpis }: KPIGridProps) {
       unit: "",
       direction: kpis.totalPublished > 0 ? "up" : "down",
       sub: "Successfully published",
+      widgetId: "kpi_total_published",
     },
   ];
 
@@ -68,9 +78,16 @@ export default function KPIGrid({ kpis }: KPIGridProps) {
       </h4>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {tiles.map((t) => (
-          <div
+          <InsightTrigger
             key={t.label}
-            className={`rounded-lg border p-3 transition-all hover:shadow-md cursor-default group ${
+            page={page}
+            widget={t.widgetId}
+            filters={filters}
+            title={t.label}
+            className="block"
+          >
+            <div
+              className={`rounded-lg border p-3 transition-all hover:shadow-md cursor-pointer group ${
               t.direction === "up"
                 ? "border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/50"
                 : "border-gray-100 hover:border-red-200 hover:bg-red-50/50"
@@ -97,6 +114,7 @@ export default function KPIGrid({ kpis }: KPIGridProps) {
             </div>
             <div className="text-[10px] text-gray-400 mt-0.5">{t.sub}</div>
           </div>
+          </InsightTrigger>
         ))}
       </div>
     </div>

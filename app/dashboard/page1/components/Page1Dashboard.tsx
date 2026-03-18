@@ -8,6 +8,7 @@ import PipelineStats from "./PipelineStats";
 import TopFormatsChart from "./TopFormatsChart";
 import DataHealthTable from "./DataHealthTable";
 import { EfficiencyMatrix } from "@/components/page3-charts";
+import InsightTrigger from "@/components/InsightTrigger";
 
 export default function Page1Dashboard() {
   const [data, setData] = useState<Page1Data | null>(null);
@@ -93,28 +94,62 @@ export default function Page1Dashboard() {
 
         {/* Tier 2: Strategic Trends - 2/3 left, 1/3 right */}
         <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <LifecycleTrendChart data={data.lifecycleTrend} />
-          </div>
-          <div>
+          <InsightTrigger
+            page="page1"
+            widget="lifecycle_trend"
+            filters={{}}
+            title="Lifecycle Trend"
+            className="lg:col-span-2 block"
+          >
+            <div className="h-full">
+              <LifecycleTrendChart data={data.lifecycleTrend} />
+            </div>
+          </InsightTrigger>
+          <InsightTrigger
+            page="page1"
+            widget="pipeline_stats"
+            filters={{}}
+            title="Pipeline Stats"
+            className="block"
+          >
             <PipelineStats data={data.pipelineStats} />
-          </div>
+          </InsightTrigger>
         </div>
 
         {/* Tier 3: Operational Drivers - 3 equal columns */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="min-h-[360px]">
-            <EfficiencyMatrix data={data.efficiencyMatrix} />
-          </div>
-          <div>
+          <InsightTrigger
+            page="page1"
+            widget="efficiency_matrix"
+            filters={{}}
+            title="Efficiency Matrix"
+            className="min-h-[360px] block"
+          >
+            <div className="h-full">
+              <EfficiencyMatrix data={data.efficiencyMatrix} />
+            </div>
+          </InsightTrigger>
+          <InsightTrigger
+            page="page1"
+            widget="top_formats"
+            filters={{}}
+            title="Top Formats"
+            className="block"
+          >
             <TopFormatsChart
               data={data.topFormatsOverTime}
               outputTypes={data.topFormatsOutputTypes}
             />
-          </div>
-          <div>
+          </InsightTrigger>
+          <InsightTrigger
+            page="page1"
+            widget="data_health"
+            filters={{}}
+            title="Data Health"
+            className="block"
+          >
             <DataHealthTable alerts={data.dataHealthAlerts} />
-          </div>
+          </InsightTrigger>
         </div>
       </div>
     </div>

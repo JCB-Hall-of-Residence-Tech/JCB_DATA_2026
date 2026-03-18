@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import InsightTrigger from "@/components/InsightTrigger";
 import {
   KPIInsightCards,
   MonthlyContributionChart,
@@ -102,28 +103,46 @@ export default function Page4() {
 
         {/* Row 2: Usage Trends — Monthly Contribution | Growth Momentum | Client Share */}
         <div className="grid grid-cols-1 lg:grid-cols-[5fr_2fr_3fr] gap-3" style={{ height: 340 }}>
-          <MonthlyContributionChart data={data.monthlyContribution} clientIds={data.clientIds} />
-          <ClientMomentumTracker data={data.monthlyContribution} clientIds={data.clientIds} />
-          <ClientShareDonut data={data.clientShare} />
+          <InsightTrigger page="page4" widget="monthly_contribution" filters={{}} title="Monthly Contribution" className="block h-full">
+            <MonthlyContributionChart data={data.monthlyContribution} clientIds={data.clientIds} />
+          </InsightTrigger>
+          <InsightTrigger page="page4" widget="client_momentum" filters={{}} title="Client Momentum" className="block h-full">
+            <ClientMomentumTracker data={data.monthlyContribution} clientIds={data.clientIds} />
+          </InsightTrigger>
+          <InsightTrigger page="page4" widget="client_share" filters={{}} title="Client Share" className="block h-full">
+            <ClientShareDonut data={data.clientShare} />
+          </InsightTrigger>
         </div>
 
         {/* Row 3: Content Amplification Factor | Language Coverage */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ minHeight: 340 }}>
-          <AmplificationChart data={data.amplification} />
-          <LanguageHeatmap matrix={data.languageMatrix} />
+          <InsightTrigger page="page4" widget="amplification" filters={{}} title="Amplification" className="block">
+            <AmplificationChart data={data.amplification} />
+          </InsightTrigger>
+          <InsightTrigger page="page4" widget="language_heatmap" filters={{}} title="Language Heatmap" className="block">
+            <LanguageHeatmap matrix={data.languageMatrix} />
+          </InsightTrigger>
         </div>
 
         {/* Row 4: Data Quality Monitor | Published Duration by Platform */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ minHeight: 320 }}>
-          <DataQualityMonitor dq={data.dataQuality} />
-          <PlatformHoursChart data={data.platformHours} />
+          <InsightTrigger page="page4" widget="data_quality_monitor" filters={{}} title="Data Quality" className="block">
+            <DataQualityMonitor dq={data.dataQuality} />
+          </InsightTrigger>
+          <InsightTrigger page="page4" widget="platform_hours" filters={{}} title="Platform Hours" className="block">
+            <PlatformHoursChart data={data.platformHours} />
+          </InsightTrigger>
         </div>
 
         {/* Row 5: Feature Adoption Heatmap */}
-        <FeatureAdoptionHeatmap matrix={data.featureMatrix} />
+        <InsightTrigger page="page4" widget="feature_adoption" filters={{}} title="Feature Adoption" className="block">
+          <FeatureAdoptionHeatmap matrix={data.featureMatrix} />
+        </InsightTrigger>
 
         {/* Row 7: Risk & Underperformance Table */}
-        <RiskTable data={data.riskTable} />
+        <InsightTrigger page="page4" widget="risk_table" filters={{}} title="Risk Table" className="block">
+          <RiskTable data={data.riskTable} />
+        </InsightTrigger>
 
         {/* Row 8: Video Explorer */}
         <VideoExplorer data={data.videoExplorer} />

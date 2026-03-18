@@ -12,6 +12,7 @@ import FunnelBars from "./FunnelBars";
 import BreakdownList from "./BreakdownList";
 import UCCTable from "./UCCTable";
 import InferenceBox from "./InferenceBox";
+import InsightTrigger from "@/components/InsightTrigger";
 
 const DIMENSION_OPTIONS: { value: DimensionKey; label: string }[] = [
   { value: "channel", label: "Channel" },
@@ -237,19 +238,49 @@ export default function Page2Dashboard() {
 
             {/* Charts */}
             <div className="grid grid-cols-1 md:grid-cols-[1.45fr_1fr] gap-3">
-              <AnalysisBarChart
-                dim1Data={dim1Data}
-                dim2Data={dim2Data}
-                dim1Label={dim1Label}
-                dim2Label={dim2Label}
-                chartMode={chartMode}
-                metric={metric}
-              />
-              <DonutChart
-                data={dim2Data}
+              <InsightTrigger
+                page="page2"
+                widget="multi_dim_bar"
+                filters={{
+                  client:
+                    selectedClient === "All Clients" ? "all" : selectedClient,
+                  dim1,
+                  dim2,
+                  metric,
+                  chartMode,
+                }}
+                title="Multi-dimensional bar chart"
+                className="block"
+              >
+                <AnalysisBarChart
+                  dim1Data={dim1Data}
+                  dim2Data={dim2Data}
+                  dim1Label={dim1Label}
+                  dim2Label={dim2Label}
+                  chartMode={chartMode}
+                  metric={metric}
+                />
+              </InsightTrigger>
+              <InsightTrigger
+                page="page2"
+                widget="multi_dim_donut"
+                filters={{
+                  client:
+                    selectedClient === "All Clients" ? "all" : selectedClient,
+                  dim1,
+                  dim2,
+                  metric,
+                  chartMode,
+                }}
                 title={`Share by ${dim2Label}`}
-                metric={metric}
-              />
+                className="block"
+              >
+                <DonutChart
+                  data={dim2Data}
+                  title={`Share by ${dim2Label}`}
+                  metric={metric}
+                />
+              </InsightTrigger>
             </div>
 
             {/* Insight */}
@@ -266,7 +297,13 @@ export default function Page2Dashboard() {
             />
 
             {/* KPIs */}
-            <KPIGrid kpis={data.kpis} />
+            <KPIGrid
+              kpis={data.kpis}
+              page="page2"
+              filters={{
+                client: selectedClient === "All Clients" ? "all" : selectedClient,
+              }}
+            />
           </div>
         </div>
 
@@ -281,8 +318,16 @@ export default function Page2Dashboard() {
             </p>
           </div>
           <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
-            <FunnelKPIs kpis={data.kpis} />
-            <TrendChart data={data.trend} />
+            <FunnelKPIs
+              kpis={data.kpis}
+              page="page2"
+              filters={{ client: selectedClient === "All Clients" ? "all" : selectedClient }}
+            />
+            <TrendChart
+              data={data.trend}
+              page="page2"
+              filters={{ client: selectedClient === "All Clients" ? "all" : selectedClient }}
+            />
             <FunnelBars kpis={data.kpis} />
             <InferenceBox
               data={data.breakdowns.channel}

@@ -5,6 +5,7 @@
 
 import { pool } from "@/lib/db";
 import type { PoolClient } from "pg";
+import { precomputeAllInsights } from "./insight-precompute";
 
 /** Normalize date strings to ISO (YYYY-MM-DD HH:MM:SS) for PostgreSQL */
 function toTimestamp(val: unknown): string | null {
@@ -191,6 +192,19 @@ export async function ingestRows(
     // 6. Recompute summary tables (only if videos were inserted/updated)
     if (videosInserted > 0) {
       await recomputeSummaryTables(pg);
+      // Invalidate and then precompute actionable insights for key widgets
+      try {
+        await pg.query("DELETE FROM actionable_insights");
+      } catch {
+        // Table may not exist yet; ignore
+      }
+      try {
+        await precomputeAllInsights(pg);
+      } catch (e) {
+        // If precompute fails, don't block ingestion – insights will be lazily computed
+        // eslint-disable-next-line no-console
+        console.error("Precompute insights failed:", e);
+      }
     }
   } finally {
     if (release) pg.release();

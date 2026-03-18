@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:update-channel-names": "node scripts/update-videos-channel-name.mjs"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "chart.js": "^4.5.1",
     "next": "16.1.6",
     "papaparse": "^5.5.3",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import InsightTrigger from "@/components/InsightTrigger";
 import s from "./page5.module.css";
 
 const ALL_SUMMARY_TABLES = [
@@ -741,18 +742,19 @@ export default function Page5() {
 
       <div className={s.dashboard}>
         {/* Alerts */}
-        <section
-          className={s.alertsSection}
-          style={{ height: `${upperHeight}vh` }}
-        >
-          <div className={s.sectionHeader}>
-            <h2>
-              <span className={s.icon}>⚠</span> Data Quality Alerts
-            </h2>
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "10px" }}
-            >
-              <div className={s.alertFilters}>
+        <InsightTrigger page="page5" widget="alerts_overview" filters={{}} title="Data Quality Alerts" className="block">
+          <section
+            className={s.alertsSection}
+            style={{ height: `${upperHeight}vh` }}
+          >
+            <div className={s.sectionHeader}>
+              <h2>
+                <span className={s.icon}>⚠</span> Data Quality Alerts
+              </h2>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              >
+                <div className={s.alertFilters}>
                 {(["all", "critical", "warning", "info"] as const).map(
                   (f) => (
                     <button
@@ -769,41 +771,42 @@ export default function Page5() {
                     </button>
                   )
                 )}
-              </div>
-              <span className={s.badge}>{alerts.length}</span>
-            </div>
-          </div>
-          <div className={s.alertsContainer}>
-            {filteredAlerts.length === 0 ? (
-              <div className={s.emptyState}>No alerts in this category</div>
-            ) : (
-              filteredAlerts.map((alert, i) => (
-                <div
-                  key={i}
-                  className={`${s.alertCard} ${
-                    alert.severity === "critical"
-                      ? s.criticalCard
-                      : alert.severity === "warning"
-                      ? s.warningCard
-                      : s.infoCard
-                  }`}
-                  style={{ animationDelay: `${i * 0.02}s` }}
-                >
-                  <div className={s.alertHeader}>
-                    <span className={s.alertSeverity}>
-                      {SEVERITY_ICONS[alert.severity] || ""} {alert.severity}
-                    </span>
-                    <span className={s.alertCategory}>
-                      · {alert.category}
-                    </span>
-                  </div>
-                  <div className={s.alertMessage}>{alert.message}</div>
-                  <div className={s.alertTable}>→ {alert.table}</div>
                 </div>
-              ))
-            )}
-          </div>
-        </section>
+                <span className={s.badge}>{alerts.length}</span>
+              </div>
+            </div>
+            <div className={s.alertsContainer}>
+              {filteredAlerts.length === 0 ? (
+                <div className={s.emptyState}>No alerts in this category</div>
+              ) : (
+                filteredAlerts.map((alert, i) => (
+                  <div
+                    key={i}
+                    className={`${s.alertCard} ${
+                      alert.severity === "critical"
+                        ? s.criticalCard
+                        : alert.severity === "warning"
+                        ? s.warningCard
+                        : s.infoCard
+                    }`}
+                    style={{ animationDelay: `${i * 0.02}s` }}
+                  >
+                    <div className={s.alertHeader}>
+                      <span className={s.alertSeverity}>
+                        {SEVERITY_ICONS[alert.severity] || ""} {alert.severity}
+                      </span>
+                      <span className={s.alertCategory}>
+                        · {alert.category}
+                      </span>
+                    </div>
+                    <div className={s.alertMessage}>{alert.message}</div>
+                    <div className={s.alertTable}>→ {alert.table}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </InsightTrigger>
 
         {/* H-Resize */}
         <div

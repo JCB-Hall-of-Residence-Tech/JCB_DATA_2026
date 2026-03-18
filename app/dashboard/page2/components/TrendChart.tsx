@@ -6,9 +6,12 @@ import type { ChartOptions } from "chart.js";
 import { CHART_FONT } from "./ChartSetup";
 import type { TrendItem } from "./types";
 import { useState } from "react";
+import InsightTrigger from "@/components/InsightTrigger";
 
 interface TrendChartProps {
   data: TrendItem[];
+  page?: string;
+  filters?: Record<string, string>;
 }
 
 const lineConfigs = [
@@ -16,7 +19,7 @@ const lineConfigs = [
   { label: "Published", key: "published" as const, color: "#10b981" },
 ];
 
-export default function TrendChart({ data }: TrendChartProps) {
+export default function TrendChart({ data, page = "page2", filters = {} }: TrendChartProps) {
   const [visibleLines, setVisibleLines] = useState([true, true]);
 
   const labels = data.map((d) => d.month);
@@ -78,10 +81,15 @@ export default function TrendChart({ data }: TrendChartProps) {
   }
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
-        Uploaded vs Published Over Time
-      </h4>
+    <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4 relative group">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+          Uploaded vs Published Over Time
+        </h4>
+        <InsightTrigger page={page} widget="trend_chart" filters={filters} title="Uploaded vs Published Over Time" className="opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-[10px] font-medium text-emerald-600 cursor-pointer hover:underline">💡 Insight</span>
+        </InsightTrigger>
+      </div>
       <div className="flex gap-2 mb-3 flex-wrap">
         {lineConfigs.map((cfg, i) => (
           <label

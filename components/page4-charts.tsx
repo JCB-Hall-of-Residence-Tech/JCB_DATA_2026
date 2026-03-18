@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import InsightTrigger from "@/components/InsightTrigger";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie, Legend,
@@ -36,6 +37,8 @@ function getClientColor(id: string, idx: number) {
    1. KPI INSIGHT CARDS
    ================================================================ */
 
+const KPI_CARD_WIDGETS = ["kpi_processed_hours", "kpi_data_quality", "kpi_feature_penetration", "kpi_publish_efficiency", "kpi_at_risk"];
+
 export function KPIInsightCards({ kpis }: { kpis: Page4KPIs }) {
   const cards = [
     { label: "Total Processed Hours", value: `${kpis.totalCreatedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h`, sub: `${kpis.totalUploadedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h uploaded · ${kpis.totalClients} clients`, icon: "⏱", valueColor: "text-gray-900", accent: "border-l-red-500" },
@@ -46,15 +49,32 @@ export function KPIInsightCards({ kpis }: { kpis: Page4KPIs }) {
   ];
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-      {cards.map((c) => (
-        <div key={c.label} className={`rounded-xl border border-gray-200 bg-white shadow-sm px-3 py-2.5 border-l-4 ${c.accent} hover:shadow-md transition-shadow`}>
-          <div className="flex items-center justify-between">
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-tight">{c.label}</p>
-            <span className="text-xs opacity-60">{c.icon}</span>
+      {cards.map((c, i) => (
+        <InsightTrigger
+          key={c.label}
+          page="page4"
+          widget={KPI_CARD_WIDGETS[i]}
+          filters={{}}
+          title={c.label}
+          className="block"
+        >
+          <div
+            className={`rounded-xl border border-gray-200 bg-white shadow-sm px-3 py-2.5 border-l-4 ${c.accent} hover:shadow-md transition-shadow cursor-pointer`}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-tight">
+                {c.label}
+              </p>
+              <span className="text-xs opacity-60">{c.icon}</span>
+            </div>
+            <p className={`text-xl font-black mt-0.5 ${c.valueColor}`}>
+              {c.value}
+            </p>
+            <p className="text-[9px] text-gray-500 mt-0.5 leading-snug">
+              {c.sub}
+            </p>
           </div>
-          <p className={`text-xl font-black mt-0.5 ${c.valueColor}`}>{c.value}</p>
-          <p className="text-[9px] text-gray-500 mt-0.5 leading-snug">{c.sub}</p>
-        </div>
+        </InsightTrigger>
       ))}
     </div>
   );

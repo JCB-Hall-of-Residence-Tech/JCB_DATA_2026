@@ -1,12 +1,15 @@
 "use client";
 
+import InsightTrigger from "@/components/InsightTrigger";
 import type { KPIs } from "./types";
 
 interface FunnelKPIsProps {
   kpis: KPIs;
+  page?: string;
+  filters?: Record<string, string>;
 }
 
-export default function FunnelKPIs({ kpis }: FunnelKPIsProps) {
+export default function FunnelKPIs({ kpis, page = "page2", filters = {} }: FunnelKPIsProps) {
   const pubRate =
     kpis.totalUploaded > 0
       ? Math.round((kpis.totalPublished / kpis.totalUploaded) * 100)
@@ -40,9 +43,16 @@ export default function FunnelKPIs({ kpis }: FunnelKPIsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       {items.map((item) => (
-        <div
+        <InsightTrigger
           key={item.label}
-          className={`rounded-xl border p-4 transition-shadow hover:shadow-md ${item.color}`}
+          page={page}
+          widget={`funnel_kpi_${item.label.toLowerCase().replace(/\s/g, "_")}`}
+          filters={filters}
+          title={item.label}
+          className="block"
+        >
+        <div
+          className={`rounded-xl border p-4 transition-shadow hover:shadow-md cursor-pointer ${item.color}`}
         >
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
             {item.label}
@@ -58,6 +68,7 @@ export default function FunnelKPIs({ kpis }: FunnelKPIsProps) {
             )}
           </div>
         </div>
+        </InsightTrigger>
       ))}
     </div>
   );

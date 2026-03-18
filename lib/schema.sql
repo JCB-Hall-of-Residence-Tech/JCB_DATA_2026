@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS videos (
   video_id BIGINT PRIMARY KEY,
   client_id VARCHAR(20) NOT NULL,
   channel_id VARCHAR(30) NOT NULL,
+  channel_name VARCHAR(100),
   user_id VARCHAR(30) NOT NULL,
   input_type_id VARCHAR(20),
   input_type_name VARCHAR(100),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import InsightTrigger from "@/components/InsightTrigger";
 import {
   EfficiencyMatrix,
   SankeyFlow,
@@ -84,30 +85,40 @@ export default function Page3() {
 
         {/* Top row: Efficiency Matrix (left) + Client & User Performance (right) */}
         <div className="grid gap-4 lg:grid-cols-2">
-          <div style={{ height: 420 }}>
-            <EfficiencyMatrix data={data.efficiency} />
-          </div>
-          <div style={{ height: 420 }}>
-            <ClientUserDrilldown clients={data.clientRanking} users={data.usersByClient} />
-          </div>
+          <InsightTrigger page="page3" widget="efficiency_matrix" filters={{}} title="Efficiency Matrix" className="block">
+            <div style={{ height: 420 }}>
+              <EfficiencyMatrix data={data.efficiency} />
+            </div>
+          </InsightTrigger>
+          <InsightTrigger page="page3" widget="client_user_drilldown" filters={{}} title="Client & User Performance" className="block">
+            <div style={{ height: 420 }}>
+              <ClientUserDrilldown clients={data.clientRanking} users={data.usersByClient} />
+            </div>
+          </InsightTrigger>
         </div>
 
         {/* Middle row: Content Flow Network (full width) */}
-        <div style={{ minHeight: 460 }}>
-          <SankeyFlow nodes={data.sankey.nodes} links={data.sankey.links} clientIds={data.sankey.clientIds} />
-        </div>
+        <InsightTrigger page="page3" widget="sankey_flow" filters={{}} title="Content Flow Network" className="block">
+          <div style={{ minHeight: 460 }}>
+            <SankeyFlow nodes={data.sankey.nodes} links={data.sankey.links} clientIds={data.sankey.clientIds} />
+          </div>
+        </InsightTrigger>
 
         {/* Bottom row: Platform Stacked + Velocity */}
         <div className="grid gap-4 lg:grid-cols-2">
-          <div style={{ height: 380 }}>
-            <PlatformStackedChart
-              data={data.stacked.data}
-              outputTypes={data.stacked.outputTypes}
-            />
-          </div>
-          <div style={{ height: 380 }}>
-            <VelocityChart data={data.velocity} />
-          </div>
+          <InsightTrigger page="page3" widget="platform_stacked" filters={{}} title="Platform × Output" className="block">
+            <div style={{ height: 380 }}>
+              <PlatformStackedChart
+                data={data.stacked.data}
+                outputTypes={data.stacked.outputTypes}
+              />
+            </div>
+          </InsightTrigger>
+          <InsightTrigger page="page3" widget="velocity_chart" filters={{}} title="Production Velocity" className="block">
+            <div style={{ height: 380 }}>
+              <VelocityChart data={data.velocity} />
+            </div>
+          </InsightTrigger>
         </div>
       </div>
     </div>
