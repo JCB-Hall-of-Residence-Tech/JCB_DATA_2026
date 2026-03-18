@@ -10,6 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 
 const PALETTE = [
   "#ef4444",
@@ -50,12 +51,17 @@ export default function TopFormatsChart({ data, outputTypes }: TopFormatsChartPr
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
-        Top Performing Formats
-      </h4>
-      <p className="text-[10px] text-gray-500 mb-3">
-        % breakdown of output type by month (published volume)
-      </p>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+            Top Performing Formats
+          </h4>
+          <p className="text-[10px] text-gray-500 mt-0.5">
+            % breakdown of output type by month (published volume)
+          </p>
+        </div>
+        <DefinitionButton definition="Stacked bar chart of published volume by output type (e.g. Shorts, Long-form) per month. Shows format mix over time." />
+      </div>
       <div className="h-[240px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart

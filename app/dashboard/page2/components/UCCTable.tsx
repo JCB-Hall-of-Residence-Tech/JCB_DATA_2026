@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 import type { BreakdownItem, DimensionKey } from "./types";
 
 interface UCCTableProps {
@@ -28,9 +29,12 @@ export default function UCCTable({ data }: UCCTableProps) {
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-          Uploaded vs Published
-        </h4>
+        <div className="flex items-center gap-2">
+          <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+            Uploaded vs Published
+          </h4>
+          <DefinitionButton definition="Table of uploaded and published counts by channel, client, or user. Rate = published ÷ uploaded × 100." />
+        </div>
         <div className="flex gap-1">
           {tabs.map((tab) => (
             <button

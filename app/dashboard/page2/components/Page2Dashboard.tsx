@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { Page2Data, DimensionKey, ChartMode } from "./types";
+import type { Page2Data, DimensionKey, ChartMode, MetricKey } from "./types";
 import FilterBar from "./FilterBar";
 import AnalysisBarChart from "./BarChart";
 import DonutChart from "./DonutChart";
@@ -34,7 +34,8 @@ export default function Page2Dashboard() {
   const [dim1, setDim1] = useState<DimensionKey>("channel");
   const [dim2, setDim2] = useState<DimensionKey>("inputType");
   const [chartMode, setChartMode] = useState<ChartMode>("stacked");
-  const [metric, setMetric] = useState<"count" | "published">("count");
+  const [metric, setMetric] = useState<MetricKey>("uploaded_count");
+  const [analysisExpanded, setAnalysisExpanded] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -122,12 +123,14 @@ export default function Page2Dashboard() {
         </div>
       )}
 
-      <FilterBar
-        clients={data.filters.clients}
-        selectedClient={selectedClient}
-        onClientChange={setSelectedClient}
-        onReset={() => setSelectedClient("All Clients")}
-      />
+      <div id="page2-filters">
+        <FilterBar
+          clients={data.filters.clients}
+          selectedClient={selectedClient}
+          onClientChange={setSelectedClient}
+          onReset={() => setSelectedClient("All Clients")}
+        />
+      </div>
 
       <div className="px-5 pt-4 pb-2 flex items-center gap-3">
         <h1 className="text-base font-bold text-gray-900 tracking-tight">
@@ -149,17 +152,34 @@ export default function Page2Dashboard() {
         }`}
       >
         {/* LEFT: Multi-Dimensional Analysis */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col">
-          <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30">
-            <h2 className="text-sm font-bold text-gray-900">
-              Multi-Dimensional Analysis
-            </h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              Pick any two dimensions to compare — charts show top items with
-              pagination
-            </p>
+        <div
+          className={`rounded-2xl border border-gray-200 bg-white shadow-sm flex flex-col transition-all ${
+            analysisExpanded ? "max-h-none" : "max-h-[540px] overflow-hidden"
+          }`}
+        >
+          <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">
+                Multi-Dimensional Analysis
+              </h2>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Pick any two dimensions to compare — charts show top items with
+                pagination
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAnalysisExpanded((v) => !v)}
+              className="text-[11px] font-semibold px-3 py-1 rounded-full border border-red-200 bg-white text-red-600 hover:bg-red-50"
+            >
+              {analysisExpanded ? "Collapse" : "Expand"}
+            </button>
           </div>
-          <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
+          <div
+            className={`p-4 flex flex-col gap-4 flex-1 ${
+              analysisExpanded ? "overflow-visible" : "overflow-y-auto"
+            }`}
+          >
             {/* Dimension pickers */}
             <div className="flex gap-3 items-end flex-wrap">
               <div className="flex-1 min-w-[120px]">
@@ -203,19 +223,21 @@ export default function Page2Dashboard() {
                   ))}
                 </select>
               </div>
-              <div className="min-w-[90px]">
+              <div className="min-w-[140px]">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 block">
                   Metric
                 </label>
                 <select
                   value={metric}
-                  onChange={(e) =>
-                    setMetric(e.target.value as "count" | "published")
-                  }
+                  onChange={(e) => setMetric(e.target.value as MetricKey)}
                   className="w-full text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-red-400"
                 >
-                  <option value="count">Upload Count</option>
-                  <option value="published">Published</option>
+                  <option value="uploaded_count">Uploaded – Count</option>
+                  <option value="processed_count">Processed – Count</option>
+                  <option value="published_count">Published – Count</option>
+                  <option value="uploaded_duration">Uploaded – Duration</option>
+                  <option value="processed_duration">Processed – Duration</option>
+                  <option value="published_duration">Published – Duration</option>
                 </select>
               </div>
               <div className="min-w-[80px]">
@@ -272,13 +294,27 @@ export default function Page2Dashboard() {
 
         {/* RIGHT: Publishing Funnel */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col">
-          <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30">
-            <h2 className="text-sm font-bold text-gray-900">
-              Publishing Funnel
-            </h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              Uploaded → Published comparison
-            </p>
+          <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">
+                Publishing Funnel
+              </h2>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Uploaded → Processed → Published comparison
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("page2-filters");
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }}
+              className="text-[11px] font-semibold px-3 py-1 rounded-full border border-red-200 bg-white text-red-600 hover:bg-red-50"
+            >
+              Change filters
+            </button>
           </div>
           <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
             <FunnelKPIs kpis={data.kpis} />

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
+import SQLChatbot from "@/components/SQLChatbot";
 
 const nav = [
   { href: "/dashboard/page1", label: "Overview" },
@@ -17,6 +19,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [chatOpen, setChatOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white">
@@ -53,8 +56,18 @@ export default function DashboardLayout({
             })}
           </nav>
 
-          <div className="hidden sm:flex items-center gap-2">
-            <button className="text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-red-300 transition-colors flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setChatOpen(true)}
+              className="text-xs font-medium text-gray-700 bg-red-50 border border-red-200 px-2 sm:px-3 py-1.5 rounded-lg hover:border-red-300 hover:bg-red-100 transition-colors flex items-center gap-1.5"
+              title="Ask questions about your data"
+            >
+              <svg className="h-3.5 w-3.5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+              <span className="hidden sm:inline">AI Data Chat</span>
+            </button>
+            <button className="hidden sm:flex text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-red-300 transition-colors items-center gap-1.5">
               <svg
                 className="h-3.5 w-3.5 text-gray-400"
                 fill="none"
@@ -74,6 +87,7 @@ export default function DashboardLayout({
       </header>
 
       <main>{children}</main>
+      <SQLChatbot open={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
 }

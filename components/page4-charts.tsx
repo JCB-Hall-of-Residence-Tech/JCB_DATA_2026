@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie, Legend,
@@ -38,19 +39,22 @@ function getClientColor(id: string, idx: number) {
 
 export function KPIInsightCards({ kpis }: { kpis: Page4KPIs }) {
   const cards = [
-    { label: "Total Processed Hours", value: `${kpis.totalCreatedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h`, sub: `${kpis.totalUploadedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h uploaded · ${kpis.totalClients} clients`, icon: "⏱", valueColor: "text-gray-900", accent: "border-l-red-500" },
-    { label: "Data Completeness", value: `${kpis.dataQualityPct}%`, sub: `${kpis.totalVideos.toLocaleString()} videos scanned`, icon: "✓", valueColor: kpis.dataQualityPct >= 95 ? "text-emerald-600" : "text-amber-500", accent: kpis.dataQualityPct >= 95 ? "border-l-emerald-500" : "border-l-amber-500" },
-    { label: "Feature Penetration", value: `${kpis.avgFeatureTypes} / ${kpis.maxFeatureTypes}`, sub: "Avg output types published per client", icon: "◎", valueColor: "text-blue-600", accent: "border-l-blue-500" },
-    { label: "Publish Efficiency (Hrs)", value: `${kpis.publishEfficiencyHrs}%`, sub: `${kpis.totalPublishedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h of ${kpis.totalCreatedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h`, icon: "↗", valueColor: kpis.publishEfficiencyHrs >= 1 ? "text-emerald-600" : "text-rose-500", accent: kpis.publishEfficiencyHrs >= 1 ? "border-l-emerald-500" : "border-l-rose-500" },
-    { label: "At-Risk Accounts", value: `${kpis.atRiskCount}`, sub: `of ${kpis.totalClients} with < 100 published`, icon: "⚠", valueColor: kpis.atRiskCount > 0 ? "text-rose-500" : "text-emerald-600", accent: kpis.atRiskCount > 0 ? "border-l-rose-500" : "border-l-emerald-500" },
+    { label: "Total Processed Hours", value: `${kpis.totalCreatedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h`, sub: `${kpis.totalUploadedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h uploaded · ${kpis.totalClients} clients`, icon: "⏱", valueColor: "text-gray-900", accent: "border-l-red-500", definition: "Total hours of content that have been fully processed (AI-generated) across all clients. Includes both uploaded and created duration." },
+    { label: "Data Completeness", value: `${kpis.dataQualityPct}%`, sub: `${kpis.totalVideos.toLocaleString()} videos scanned`, icon: "✓", valueColor: kpis.dataQualityPct >= 95 ? "text-emerald-600" : "text-amber-500", accent: kpis.dataQualityPct >= 95 ? "border-l-emerald-500" : "border-l-amber-500", definition: "Percentage of videos with complete metadata (input type, language, platform, URL). Higher is better; 95%+ is healthy." },
+    { label: "Feature Penetration", value: `${kpis.avgFeatureTypes} / ${kpis.maxFeatureTypes}`, sub: "Avg output types published per client", icon: "◎", valueColor: "text-blue-600", accent: "border-l-blue-500", definition: "Average number of output types (e.g. Shorts, Long-form) each client publishes, vs. total types available. Indicates feature adoption breadth." },
+    { label: "Publish Efficiency (Hrs)", value: `${kpis.publishEfficiencyHrs}%`, sub: `${kpis.totalPublishedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h of ${kpis.totalCreatedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h`, icon: "↗", valueColor: kpis.publishEfficiencyHrs >= 1 ? "text-emerald-600" : "text-rose-500", accent: kpis.publishEfficiencyHrs >= 1 ? "border-l-emerald-500" : "border-l-rose-500", definition: "Published hours ÷ processed hours × 100. Shows how much of processed content reaches publishing. 100%+ means full utilization." },
+    { label: "At-Risk Accounts", value: `${kpis.atRiskCount}`, sub: `of ${kpis.totalClients} with < 100 published`, icon: "⚠", valueColor: kpis.atRiskCount > 0 ? "text-rose-500" : "text-emerald-600", accent: kpis.atRiskCount > 0 ? "border-l-rose-500" : "border-l-emerald-500", definition: "Clients with fewer than 100 published outputs. May indicate low adoption, churn risk, or onboarding issues." },
   ];
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
       {cards.map((c) => (
-        <div key={c.label} className={`rounded-xl border border-gray-200 bg-white shadow-sm px-3 py-2.5 border-l-4 ${c.accent} hover:shadow-md transition-shadow`}>
+        <div key={c.label} className={`rounded-xl border border-gray-200 bg-white shadow-sm px-3 py-2.5 border-l-4 ${c.accent} hover:shadow-md transition-shadow relative`}>
           <div className="flex items-center justify-between">
             <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-tight">{c.label}</p>
-            <span className="text-xs opacity-60">{c.icon}</span>
+            <div className="flex items-center gap-1">
+              <DefinitionButton definition={c.definition} />
+              <span className="text-xs opacity-60">{c.icon}</span>
+            </div>
           </div>
           <p className={`text-xl font-black mt-0.5 ${c.valueColor}`}>{c.value}</p>
           <p className="text-[9px] text-gray-500 mt-0.5 leading-snug">{c.sub}</p>
@@ -67,9 +71,12 @@ export function KPIInsightCards({ kpis }: { kpis: Page4KPIs }) {
 export function MonthlyContributionChart({ data, clientIds }: { data: Record<string, string | number>[]; clientIds: string[] }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
-      <div className="shrink-0 px-4 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30">
-        <h3 className="text-sm font-bold text-gray-900">Monthly Client Billing Contribution</h3>
-        <p className="text-[10px] text-gray-400 mt-0.5">Processed hours stacked by client</p>
+      <div className="shrink-0 px-4 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">Monthly Client Billing Contribution</h3>
+          <p className="text-[10px] text-gray-400 mt-0.5">Processed hours stacked by client</p>
+        </div>
+        <DefinitionButton definition="Stacked area chart of processed hours per client per month. Shows each client's contribution to total capacity over time." />
       </div>
       <div className="flex-1 min-h-0 p-2">
         <ResponsiveContainer width="100%" height="100%">
@@ -108,9 +115,12 @@ export function ClientMomentumTracker({ data, clientIds }: { data: Record<string
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
-      <div className="shrink-0 px-4 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30">
-        <h3 className="text-sm font-bold text-gray-900">Client Growth Momentum</h3>
-        <p className="text-[10px] text-gray-400 mt-0.5">Quarterly trend shift per account</p>
+      <div className="shrink-0 px-4 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">Client Growth Momentum</h3>
+          <p className="text-[10px] text-gray-400 mt-0.5">Quarterly trend shift per account</p>
+        </div>
+        <DefinitionButton definition="Compares recent 3 months vs. prior 3 months per client. Growth % shows whether each account is accelerating or decelerating in processed volume." />
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-1.5">
         {clientRows.map((row) => (
@@ -147,9 +157,12 @@ export function ClientShareDonut({ data }: { data: ClientShare[] }) {
   const pieData = data.map((d) => ({ name: d.client_id, value: d.createdHours, pct: total === 0 ? 0 : Math.round((d.createdHours / total) * 1000) / 10 }));
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
-      <div className="shrink-0 px-4 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30">
-        <h3 className="text-sm font-bold text-gray-900">Client Processing Share</h3>
-        <p className="text-[10px] text-gray-400 mt-0.5">Who drives capacity usage?</p>
+      <div className="shrink-0 px-4 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">Client Processing Share</h3>
+          <p className="text-[10px] text-gray-400 mt-0.5">Who drives capacity usage?</p>
+        </div>
+        <DefinitionButton definition="Donut chart showing each client's share of total processed hours. Identifies which accounts drive the most capacity usage." />
       </div>
       <div className="flex-1 p-2 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
@@ -177,9 +190,12 @@ export function AmplificationChart({ data }: { data: AmplificationRow[] }) {
   }));
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
-      <div className="shrink-0 px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30">
-        <h3 className="text-sm font-bold text-gray-900">Content Amplification Factor</h3>
-        <p className="text-[11px] text-gray-400 mt-0.5">For every 1 upload, how many outputs are generated?</p>
+      <div className="shrink-0 px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">Content Amplification Factor</h3>
+          <p className="text-[11px] text-gray-400 mt-0.5">For every 1 upload, how many outputs are generated?</p>
+        </div>
+        <DefinitionButton definition="Processed count ÷ uploaded count per client. Shows how much content each upload generates (e.g. 5× means 1 upload yields 5 outputs)." />
       </div>
       <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
         <div className="flex-1 min-h-0">
@@ -217,9 +233,12 @@ export function AmplificationChart({ data }: { data: AmplificationRow[] }) {
 export function PlatformHoursChart({ data }: { data: PlatformHoursRow[] }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
-      <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30">
-        <h3 className="text-sm font-bold text-gray-900">Published Duration by Platform</h3>
-        <p className="text-[11px] text-gray-400 mt-0.5">Total published hours reaching each platform</p>
+      <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">Published Duration by Platform</h3>
+          <p className="text-[11px] text-gray-400 mt-0.5">Total published hours reaching each platform</p>
+        </div>
+        <DefinitionButton definition="Total hours of content published to each platform (YouTube, TikTok, etc.). Aggregated from channel_wise_publishing_duration." />
       </div>
       <div className="flex-1 min-h-0 p-4">
         <ResponsiveContainer width="100%" height="100%">
@@ -266,9 +285,12 @@ export function LanguageHeatmap({ matrix }: { matrix: LanguageMatrix }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
       <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-gray-900">Language Coverage by Client</h3>
-          <p className="text-[11px] text-gray-400 mt-0.5">Which languages each account processes</p>
+        <div className="flex items-start gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900">Language Coverage by Client</h3>
+            <p className="text-[11px] text-gray-400 mt-0.5">Which languages each account processes</p>
+          </div>
+          <DefinitionButton definition="Heatmap of processing hours or published count by client and language. Shows which languages each account uses." />
         </div>
         <select value={metric} onChange={(e) => setMetric(e.target.value as "hours" | "published")}
           className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-red-400">
@@ -328,9 +350,12 @@ export function FeatureAdoptionHeatmap({ matrix }: { matrix: FeatureMatrix }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
       <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-gray-900">Feature Adoption by Client</h3>
-          <p className="text-[11px] text-gray-400 mt-0.5">Output type usage intensity across accounts</p>
+        <div className="flex items-start gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900">Feature Adoption by Client</h3>
+            <p className="text-[11px] text-gray-400 mt-0.5">Output type usage intensity across accounts</p>
+          </div>
+          <DefinitionButton definition="Heatmap of published or processed count by client and output type (e.g. Shorts, Long-form). Shows feature adoption intensity." />
         </div>
         <select value={metric} onChange={(e) => setMetric(e.target.value as "published" | "created")}
           className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-red-400">
@@ -380,9 +405,12 @@ export function DataQualityMonitor({ dq }: { dq: DataQuality }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
       <div className="shrink-0 px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-gray-900">Data Quality Monitor</h3>
-          <p className="text-[11px] text-gray-400 mt-0.5">Field-level completeness across {dq.total.toLocaleString()} videos</p>
+        <div className="flex items-start gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900">Data Quality Monitor</h3>
+            <p className="text-[11px] text-gray-400 mt-0.5">Field-level completeness across {dq.total.toLocaleString()} videos</p>
+          </div>
+          <DefinitionButton definition="Counts of videos with missing input type, language, platform, or URL. Lower counts indicate better data quality." />
         </div>
         <div className="flex items-center gap-2">
           <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -429,9 +457,12 @@ function riskLevel(row: RiskRow) {
 export function RiskTable({ data }: { data: RiskRow[] }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30">
-        <h3 className="text-sm font-bold text-gray-900">Client Risk & Underperformance Monitor</h3>
-        <p className="text-[11px] text-gray-400 mt-0.5">Composite risk score from publish rate, data quality gaps, and feature adoption</p>
+      <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">Client Risk & Underperformance Monitor</h3>
+          <p className="text-[11px] text-gray-400 mt-0.5">Composite risk score from publish rate, data quality gaps, and feature adoption</p>
+        </div>
+        <DefinitionButton definition="Risk score combines: publish rate (published/created), data issues (unknown input, missing platform/URL), and feature gap (unused output types). HIGH/MODERATE/HEALTHY." />
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -485,7 +516,10 @@ export function VideoExplorer({ data }: { data: VideoRow[] }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-sm font-bold text-gray-900">Published Video Explorer</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-bold text-gray-900">Published Video Explorer</h3>
+          <DefinitionButton definition="Searchable table of published videos with client, channel, user, output type, platform, and URL. Use filters to narrow results." />
+        </div>
         <div className="flex gap-2">
           <input type="text" placeholder="Search ID, client, channel, user..." value={search} onChange={(e) => setSearch(e.target.value)}
             className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-red-400 transition-colors w-48" />

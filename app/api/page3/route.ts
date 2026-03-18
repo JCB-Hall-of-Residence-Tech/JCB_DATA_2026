@@ -39,16 +39,21 @@ export async function GET() {
         source: string;
         target: string;
         value: number;
+        language: string;
       }>(`
         SELECT v.client_id,
                INITCAP(LOWER(TRIM(v.input_type_name))) AS source,
                INITCAP(LOWER(TRIM(cs.channel_name))) AS target,
+               COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown') AS language,
                COUNT(*)::int AS value
         FROM videos v
         JOIN channel_processing_summary cs ON cs.client_id = v.client_id AND cs.channel_id = v.channel_id
         WHERE v.input_type_name IS NOT NULL
           AND cs.channel_name IS NOT NULL
-        GROUP BY v.client_id, LOWER(TRIM(v.input_type_name)), LOWER(TRIM(cs.channel_name))
+        GROUP BY v.client_id,
+                 LOWER(TRIM(v.input_type_name)),
+                 LOWER(TRIM(cs.channel_name)),
+                 COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown')
         HAVING COUNT(*) > 0
 
         UNION ALL
@@ -56,12 +61,16 @@ export async function GET() {
         SELECT v.client_id,
                INITCAP(LOWER(TRIM(cs.channel_name))) AS source,
                INITCAP(LOWER(TRIM(v.output_type_name))) AS target,
+               COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown') AS language,
                COUNT(*)::int AS value
         FROM videos v
         JOIN channel_processing_summary cs ON cs.client_id = v.client_id AND cs.channel_id = v.channel_id
         WHERE cs.channel_name IS NOT NULL
           AND v.output_type_name IS NOT NULL
-        GROUP BY v.client_id, LOWER(TRIM(cs.channel_name)), LOWER(TRIM(v.output_type_name))
+        GROUP BY v.client_id,
+                 LOWER(TRIM(cs.channel_name)),
+                 LOWER(TRIM(v.output_type_name)),
+                 COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown')
         HAVING COUNT(*) > 0
 
         ORDER BY value DESC
@@ -215,6 +224,7 @@ export async function GET() {
           source: l.source,
           target: l.target,
           value: Number(l.value),
+          language: l.language,
         })),
         clientIds: Array.from(new Set(sankeyLinks.map((l) => l.client_id).filter(Boolean))).sort(),
       },

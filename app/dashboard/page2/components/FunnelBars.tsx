@@ -1,6 +1,7 @@
 "use client";
 
 import type { KPIs } from "./types";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 
 interface FunnelBarsProps {
   kpis: KPIs;
@@ -22,10 +23,13 @@ export default function FunnelBars({ kpis }: FunnelBarsProps) {
 
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-      <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
-        Uploaded → Published Funnel
-        <span className="flex-1 h-px bg-gray-100" />
-      </h4>
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+          Uploaded → Published Funnel
+          <span className="flex-1 h-px bg-gray-100" />
+        </h4>
+        <DefinitionButton definition="Visual funnel from uploaded to published. Shows conversion and drop-off between stages." />
+      </div>
       <div className="flex flex-col gap-3">
         {stages.map((s) => (
           <div key={s.label} className="flex flex-col gap-1">

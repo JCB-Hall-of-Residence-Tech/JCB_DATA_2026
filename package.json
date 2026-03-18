@@ -9,10 +9,15 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/core": "^1.1.33",
+    "@langchain/google-genai": "^2.1.26",
     "chart.js": "^4.5.1",
+    "langchain": "^1.2.34",
     "next": "16.1.6",
     "papaparse": "^5.5.3",
     "pg": "^8.13.0",
+    "plotly.js-dist-min": "^3.4.0",
     "react": "19.2.3",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "19.2.3",

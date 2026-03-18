@@ -52,5 +52,11 @@ export type DimensionKey =
   | "language";
 
 export type ChartMode = "stacked" | "grouped";
-export type MetricKey = "count" | "published";
+export type MetricKey =
+  | "uploaded_count"
+  | "processed_count"
+  | "published_count"
+  | "uploaded_duration"
+  | "processed_duration"
+  | "published_duration";
 export type SortKey = "pub" | "proc" | "rate";

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import s from "./page5.module.css";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 
 const ALL_SUMMARY_TABLES = [
   "channel_processing_summary",
@@ -27,6 +28,19 @@ const TABLE_LABELS: Record<string, string> = {
   monthly_processing_summary: "Monthly Proc.",
   output_type_processing_summary: "Output Type",
   user_processing_summary: "User Processing",
+};
+
+const TABLE_DEFINITIONS: Record<string, string> = {
+  channel_processing_summary: "Aggregated counts and durations per channel (uploaded, created, published).",
+  channel_user_processing_summary: "Processing metrics per channel × user combination.",
+  channel_wise_publishing_counts: "Published video counts per channel.",
+  channel_wise_publishing_duration: "Published duration (hours) per channel.",
+  input_type_processing_summary: "Processing by input type (e.g. long-form, live).",
+  language_processing_summary: "Processing by language.",
+  monthly_duration_summary: "Duration totals by month.",
+  monthly_processing_summary: "Processing counts by month.",
+  output_type_processing_summary: "Processing by output type (e.g. Shorts, Long-form).",
+  user_processing_summary: "Processing metrics per user.",
 };
 
 const TABLE_FULL_NAMES: Record<string, string> = {
@@ -101,6 +115,150 @@ function exportCSV(columns: string[], rows: Row[], filename: string) {
   link.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+const DATA_TYPES = [
+  { value: "TEXT", label: "Text" },
+  { value: "VARCHAR(255)", label: "Varchar(255)" },
+  { value: "VARCHAR(100)", label: "Varchar(100)" },
+  { value: "VARCHAR(50)", label: "Varchar(50)" },
+  { value: "INTEGER", label: "Integer" },
+  { value: "BIGINT", label: "Bigint" },
+  { value: "BOOLEAN", label: "Boolean" },
+  { value: "TIMESTAMP", label: "Timestamp" },
+  { value: "TIMESTAMPTZ", label: "Timestamp (tz)" },
+  { value: "NUMERIC(12,2)", label: "Numeric" },
+  { value: "JSONB", label: "JSON" },
+];
+
+function AddColumnModal({
+  open,
+  table,
+  tableLabel,
+  onClose,
+  onSuccess,
+}: {
+  open: boolean;
+  table: string;
+  tableLabel: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [column, setColumn] = useState("");
+  const [dataType, setDataType] = useState("TEXT");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    const name = column.trim().toLowerCase().replace(/\s+/g, "_");
+    if (!name) {
+      setError("Column name is required");
+      return;
+    }
+    if (!/^[a-z][a-z0-9_]*$/i.test(name)) {
+      setError("Column must start with a letter, use only letters, numbers, underscores");
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/page5/add-column", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table, column: name, dataType }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || "Failed to add column");
+        return;
+      }
+      onSuccess();
+      onClose();
+      setColumn("");
+      setDataType("TEXT");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    setColumn("");
+    setDataType("TEXT");
+    setError(null);
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className={s.modalOverlay} onClick={handleClose}>
+      <div className={s.modal} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+        <div className={s.modalHeader}>
+          <h3>Add Column to {tableLabel}</h3>
+          <button type="button" className={s.modalClose} onClick={handleClose}>
+            ✕
+          </button>
+        </div>
+        <div className={s.modalBody}>
+          <p className={s.modalHint}>
+            Add a new column to the <strong>{table}</strong> table. Changes are persisted to the database.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>
+                Column name
+              </label>
+              <input
+                type="text"
+                value={column}
+                onChange={(e) => setColumn(e.target.value)}
+                placeholder="e.g. notes, custom_field"
+                className={s.compactSearch}
+                style={{ width: "100%", maxWidth: "none", fontSize: 12 }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>
+                Data type
+              </label>
+              <select
+                value={dataType}
+                onChange={(e) => setDataType(e.target.value)}
+                className={s.compactFilterSelect}
+                style={{ width: "100%", maxWidth: "none", fontSize: 12, padding: 6 }}
+              >
+                {DATA_TYPES.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {error && (
+              <div style={{ fontSize: 12, color: "#dc2626", padding: 8, background: "#fef2f2", borderRadius: 8 }}>
+                {error}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className={s.modalFooter}>
+          <button type="button" className={s.modalBtnSecondary} onClick={handleClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={s.modalBtnPrimary}
+            onClick={handleSubmit}
+            disabled={submitting || !column.trim()}
+          >
+            {submitting ? "Adding…" : "Add Column"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function UploadModal({
@@ -627,6 +785,7 @@ export default function Page5() {
   const [isResizingV, setIsResizingV] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [expandedTable, setExpandedTable] = useState<string | null>(null);
+  const [addColumnTable, setAddColumnTable] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -699,6 +858,13 @@ export default function Page5() {
         onClose={() => setShowUploadModal(false)}
         onSuccess={fetchData}
       />
+      <AddColumnModal
+        open={!!addColumnTable}
+        table={addColumnTable || ""}
+        tableLabel={addColumnTable === "videos" ? "Videos" : TABLE_FULL_NAMES[addColumnTable || ""] || addColumnTable || ""}
+        onClose={() => setAddColumnTable(null)}
+        onSuccess={fetchData}
+      />
       {expandedTable && (
         <div
           className={s.tableExpandOverlay}
@@ -714,13 +880,22 @@ export default function Page5() {
                   ? "Videos"
                   : TABLE_FULL_NAMES[expandedTable] || expandedTable}
               </h2>
-              <button
-                type="button"
-                className={s.tableExpandClose}
-                onClick={() => setExpandedTable(null)}
-              >
-                ✕
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  type="button"
+                  className={s.addColumnBtn}
+                  onClick={() => expandedTable && setAddColumnTable(expandedTable)}
+                >
+                  + Add Column
+                </button>
+                <button
+                  type="button"
+                  className={s.tableExpandClose}
+                  onClick={() => setExpandedTable(null)}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
             <div className={s.tableExpandBody}>
               {expandedTable === "videos" ? (
@@ -746,9 +921,12 @@ export default function Page5() {
           style={{ height: `${upperHeight}vh` }}
         >
           <div className={s.sectionHeader}>
-            <h2>
-              <span className={s.icon}>⚠</span> Data Quality Alerts
-            </h2>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <h2>
+                <span className={s.icon}>⚠</span> Data Quality Alerts
+              </h2>
+              <DefinitionButton definition="Automated checks for data completeness, consistency, and anomalies across summary tables. Critical = blocking; Warning = review; Info = FYI." />
+            </div>
             <div
               style={{ display: "flex", alignItems: "center", gap: "10px" }}
             >
@@ -821,10 +999,20 @@ export default function Page5() {
             style={{ flex: `0 0 ${leftWidth}%` }}
           >
             <div className={s.sectionHeader}>
-              <h2>
-                <span className={s.icon}>🎬</span> Videos
-              </h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <h2>
+                  <span className={s.icon}>🎬</span> Videos
+                </h2>
+                <DefinitionButton definition="Raw video records with client, channel, user, input/output type, platform, and publishing status. Search, filter, sort, and export." />
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  className={s.addColumnBtn}
+                  onClick={() => setAddColumnTable("videos")}
+                >
+                  + Add Column
+                </button>
                 <button
                   type="button"
                   className={s.tcExpandBtn}
@@ -859,7 +1047,10 @@ export default function Page5() {
           {/* Summaries */}
           <div className={s.summaryWrapper}>
             <div className={s.summaryHeader}>
-              <span className={s.summaryTitle}>Summary Tables</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span className={s.summaryTitle}>Summary Tables</span>
+                <DefinitionButton definition="Pre-aggregated views from the database. Each table summarizes processing, publishing, or duration by dimension (channel, user, month, etc.)." />
+              </div>
               <div style={{ position: "relative" }}>
                 <button
                   className={s.dtBtn}
@@ -952,10 +1143,23 @@ export default function Page5() {
                       className={s.tableCardHeader}
                       title={TABLE_FULL_NAMES[t] || t}
                     >
-                      <h3 title={TABLE_FULL_NAMES[t] || t}>
-                        {TABLE_LABELS[t] || t}
-                      </h3>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                        <h3 title={TABLE_FULL_NAMES[t] || t}>
+                          {TABLE_LABELS[t] || t}
+                        </h3>
+                        <DefinitionButton definition={TABLE_DEFINITIONS[t] || "Summary table."} />
+                      </div>
                       <div className={s.tableCardActions}>
+                        <button
+                          className={s.tcAddColumnBtn}
+                          title="Add column"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAddColumnTable(t);
+                          }}
+                        >
+                          +
+                        </button>
                         <button
                           className={s.tcExpandBtn}
                           title="Expand"

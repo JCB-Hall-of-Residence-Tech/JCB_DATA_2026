@@ -22,9 +22,11 @@ export async function GET() {
       totalUploadedCountRes,
       totalUploadedDurRes,
       totalCreatedRes,
+      totalCreatedDurRes,
       topOutputRes,
       monthlyProcRes,
       monthlyDurRes,
+      monthlyCreatedDurRes,
       lifecycleCountRes,
       lifecycleDurRes,
       efficiencyRes,
@@ -114,10 +116,19 @@ export async function GET() {
         FROM monthly_duration_summary
       `),
 
-      // 6. Total AI-Generated Output — from monthly_processing_summary
+      // 6. Total AI-Generated Output — uses PROCESSED (total_created = processed_at), NOT uploaded
       query(`
         SELECT COALESCE(SUM(total_created), 0)::int AS total_created
         FROM monthly_processing_summary
+      `),
+      query(`
+        SELECT COALESCE(SUM(
+          CASE WHEN total_created_duration IS NOT NULL AND TRIM(COALESCE(total_created_duration::text, '')) != ''
+               THEN EXTRACT(EPOCH FROM (total_created_duration::text::interval))
+               ELSE NULL
+          END
+        ), 0)::numeric AS total_seconds
+        FROM monthly_duration_summary
       `),
 
       // 7 & 9. Top output type (from output_type_processing_summary)
@@ -141,7 +152,7 @@ export async function GET() {
         ORDER BY month
       `),
 
-      // Monthly duration for trend (human hours by month)
+      // Monthly duration for trend (human hours by month) — uploaded hours summed per month across clients
       query(`
         SELECT month, client_id,
           CASE WHEN total_uploaded_duration IS NOT NULL AND TRIM(COALESCE(total_uploaded_duration::text, '')) != ''
@@ -150,6 +161,20 @@ export async function GET() {
           END AS total_seconds
         FROM monthly_duration_summary
         ORDER BY month, client_id
+      `),
+
+      // Monthly created duration — processed hours summed per month across clients
+      query(`
+        SELECT month,
+          COALESCE(SUM(
+            CASE WHEN total_created_duration IS NOT NULL AND TRIM(COALESCE(total_created_duration::text, '')) != ''
+                 THEN EXTRACT(EPOCH FROM (total_created_duration::text::interval))
+                 ELSE 0
+            END
+          ), 0)::numeric AS created_seconds
+        FROM monthly_duration_summary
+        GROUP BY month
+        ORDER BY month
       `),
 
       // Lifecycle by client (count)
@@ -290,6 +315,7 @@ export async function GET() {
     const totalUploadedDurationSec = Number((totalUploadedDurRes.rows[0] as { total_seconds: string })?.total_seconds ?? 0);
 
     const totalCreated = Number((totalCreatedRes.rows[0] as { total_created: string })?.total_created ?? 0);
+    const totalCreatedDurationSec = Number((totalCreatedDurRes.rows[0] as { total_seconds: string })?.total_seconds ?? 0);
 
     const topOutputRow = topOutputRes.rows[0] as { output_type_name: string } | undefined;
     const topPerformingOutputType = topOutputRow?.output_type_name ?? "—";
@@ -372,6 +398,7 @@ export async function GET() {
       month: r.month,
       uploaded: Number(r.total_uploaded),
       created: Number(r.total_created),
+      published: Number(r.total_published),
     }));
 
     // Efficiency matrix (EfficiencyMatrix expects created_count, published_count, publish_rate)
@@ -421,6 +448,10 @@ export async function GET() {
     const humanHoursPrevFormatted = formatDuration(humanHoursPrev * 3);
     const humanHoursCurrentFormatted = formatDuration(humanHoursCurrent * 3);
     const currentMonthUploadedDurationFormatted = formatDuration(humanHoursCurrent);
+
+    const createdDurRows = monthlyCreatedDurRes.rows as { month: string; created_seconds: string }[];
+    const currentMonthCreatedDurationSec = Number(createdDurRows.find((r) => r.month === currentMonth)?.created_seconds ?? 0);
+    const currentMonthCreatedDurationFormatted = formatDuration(currentMonthCreatedDurationSec);
     const prevMonthLabel = prevMonth || "previous month";
     const currentMonthLabel = currentMonth || "current month";
     // Format month for display: "2024-02" -> "Feb 2024"
@@ -466,7 +497,9 @@ export async function GET() {
         prevMonthCreated: prevRow ? Number(prevRow.total_created ?? 0) : 0,
 
         totalCreated,
+        totalCreatedDurationFormatted: formatDuration(totalCreatedDurationSec),
         totalCreatedTrendPct,
+        currentMonthCreatedDurationFormatted,
 
         aiContentMultiplier: Math.round(aiMultiplier * 10) / 10,
         aiMultiplierTrendPct,
@@ -488,6 +521,7 @@ export async function GET() {
       pipelineStats: {
         totalUploaded: totalUploadedCount,
         totalProcessed: totalCreated,
+        totalPublished: pipelineMonthly.reduce((sum, m) => sum + m.published, 0),
         monthly: pipelineMonthly,
       },
       efficiencyMatrix,

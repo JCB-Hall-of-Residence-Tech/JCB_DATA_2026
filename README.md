@@ -1,5 +1,11 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## AI Data Chat
+
+The dashboard includes an **AI Data Chat** button that opens a natural-language SQL assistant. Ask questions like "Top channels by published videos" or "Monthly upload trend" and get SQL, results, charts, and insights.
+
+**Setup:** Add `GOOGLE_API_KEY` to your environment (get one at [Google AI Studio](https://aistudio.google.com/apikey)). The chatbot uses Gemini to generate SQL from your PostgreSQL schema. Schema is loaded dynamically from the database on each request, so it stays up to date when tables or columns change.
+
 ## Getting Started
 
 First, run the development server:

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 import {
   ScatterChart,
   Scatter,
@@ -27,7 +28,13 @@ export type EfficiencyPoint = {
 };
 
 export type SankeyNode = { name: string };
-export type SankeyLink = { client_id?: string; source: string; target: string; value: number };
+export type SankeyLink = {
+  client_id?: string;
+  source: string;
+  target: string;
+  value: number;
+  language?: string;
+};
 
 export type TornadoUser = {
   user_name: string;
@@ -117,11 +124,14 @@ export function EfficiencyMatrix({ data }: { data: EfficiencyPoint[] }) {
   return (
     <div className="flex h-full flex-col rounded-xl border border-red-100 bg-white/70 p-4 shadow-sm shadow-red-50">
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-zinc-900">Efficiency Matrix</h3>
-          <p className="text-xs text-zinc-500">
-            Created vs Published per channel — {filtered.length} channel{filtered.length !== 1 ? "s" : ""}
-          </p>
+        <div className="flex items-start gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900">Efficiency Matrix</h3>
+            <p className="text-xs text-zinc-500">
+              Created vs Published per channel — {filtered.length} channel{filtered.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <DefinitionButton definition="Scatter plot of created count (x) vs published count (y) per channel. Higher publish rate = better efficiency. Filter by client." />
         </div>
         <div className="flex flex-wrap gap-1">
           <button
@@ -268,7 +278,7 @@ function CollapsibleColumn({
 }) {
   return (
     <div
-      className="flex flex-1 flex-col px-2.5 py-3"
+      className={`flex flex-col px-2.5 py-3 transition-all duration-200 ${collapsed ? "w-20 shrink-0" : "min-w-[180px] flex-1"}`}
       style={{ borderRight: borderRight ? "1px solid #e5e7eb" : undefined }}
     >
       <button
@@ -285,12 +295,12 @@ function CollapsibleColumn({
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
-        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
         <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</span>
         <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">{count}</span>
       </button>
       {!collapsed && (
-        <div className="flex-1 space-y-1 overflow-y-auto">
+        <div className="grid min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(140px,1fr))] content-start gap-1.5 overflow-auto">
           {children}
         </div>
       )}
@@ -300,7 +310,9 @@ function CollapsibleColumn({
 
 export function SankeyFlow({ nodes, links, clientIds: propClientIds }: SankeyProps) {
   const [selected, setSelected] = useState<{ name: string; layer: FlowLayer } | null>(null);
-  const [clientFilter, setClientFilter] = useState<string>("all");
+  const [clientFilter, setClientFilter] = useState<string[]>(["all"]);
+  const [languageFilter, setLanguageFilter] = useState<string[]>(["all"]);
+  // Expanded by default (not collapsed)
   const [inputsCollapsed, setInputsCollapsed] = useState(false);
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
   const [outputsCollapsed, setOutputsCollapsed] = useState(false);
@@ -317,9 +329,23 @@ export function SankeyFlow({ nodes, links, clientIds: propClientIds }: SankeyPro
     ? propClientIds
     : Array.from(new Set(links.map((l) => l.client_id).filter((id): id is string => !!id))).sort();
 
-  const filteredRawLinks = clientFilter === "all"
-    ? links
-    : links.filter((l) => l.client_id === clientFilter);
+  const allLanguages = Array.from(
+    new Set(
+      links
+        .map((l) => l.language)
+        .filter((lng): lng is string => !!lng && lng !== "Unknown")
+    )
+  ).sort();
+
+  const filteredRawLinks = links.filter((l) => {
+    const clientOk =
+      clientFilter.includes("all") ||
+      (l.client_id && clientFilter.includes(l.client_id));
+    const langOk =
+      languageFilter.includes("all") ||
+      (l.language && languageFilter.includes(l.language));
+    return clientOk && langOk;
+  });
 
   const activeLinks = aggregateLinks(filteredRawLinks);
 
@@ -437,13 +463,16 @@ export function SankeyFlow({ nodes, links, clientIds: propClientIds }: SankeyPro
       {/* Header */}
       <div className="shrink-0 border-b border-red-100/60">
         <div className="flex items-center justify-between px-5 py-2.5">
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900">Content Flow Network</h3>
-            <p className="text-xs text-zinc-500">
-              {selected
-                ? `Connections for "${selected.name}"`
-                : "Select any node to explore its connections"}
-            </p>
+          <div className="flex items-start gap-2">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-900">Content Flow Network</h3>
+              <p className="text-xs text-zinc-500">
+                {selected
+                  ? `Connections for "${selected.name}"`
+                  : "Select any node to explore its connections"}
+              </p>
+            </div>
+            <DefinitionButton definition="Sankey-style flow: Input types → Channels → Output types. Click a node to see incoming/outgoing connections. Filter by client." />
           </div>
           {selected && (
             <button
@@ -455,32 +484,104 @@ export function SankeyFlow({ nodes, links, clientIds: propClientIds }: SankeyPro
             </button>
           )}
         </div>
-        {/* Client filter row */}
-        <div className="flex items-center gap-2 overflow-x-auto border-t border-zinc-100 px-5 py-2">
-          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Client:</span>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => { setClientFilter("all"); setSelected(null); }}
-              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                clientFilter === "all" ? "bg-red-600 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-red-50"
-              }`}
-            >
-              All
-            </button>
-            {allClientIds.map((id) => (
+        {/* Filter row */}
+        <div className="flex flex-wrap items-center gap-3 overflow-x-auto border-t border-zinc-100 px-5 py-2 text-[10px]">
+          <div className="flex items-center gap-1">
+            <span className="shrink-0 font-semibold uppercase tracking-wider text-zinc-400">
+              Client:
+            </span>
+            <div className="flex gap-1">
               <button
-                key={id}
                 type="button"
-                onClick={() => { setClientFilter(id); setSelected(null); }}
+                onClick={() => {
+                  setClientFilter(["all"]);
+                  setSelected(null);
+                }}
                 className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                  clientFilter === id ? "bg-red-600 text-white" : "border border-zinc-200 bg-white text-zinc-600 hover:bg-red-50"
+                  clientFilter.includes("all")
+                    ? "bg-red-600 text-white"
+                    : "border border-zinc-200 bg-white text-zinc-600 hover:bg-red-50"
                 }`}
               >
-                {id}
+                All
               </button>
-            ))}
+              {allClientIds.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setSelected(null);
+                    setClientFilter((prev) => {
+                      if (prev.includes("all")) {
+                        return [id];
+                      }
+                      if (prev.includes(id)) {
+                        const next = prev.filter((v) => v !== id);
+                        return next.length === 0 ? ["all"] : next;
+                      }
+                      return [...prev, id];
+                    });
+                  }}
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                    clientFilter.includes(id)
+                      ? "bg-red-600 text-white"
+                      : "border border-zinc-200 bg-white text-zinc-600 hover:bg-red-50"
+                  }`}
+                >
+                  {id}
+                </button>
+              ))}
+            </div>
           </div>
+          {allLanguages.length > 0 && (
+            <div className="ml-auto flex items-center gap-1">
+              <span className="shrink-0 font-semibold uppercase tracking-wider text-zinc-400">
+                Language:
+              </span>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLanguageFilter(["all"]);
+                    setSelected(null);
+                  }}
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                    languageFilter.includes("all")
+                      ? "bg-red-600 text-white"
+                      : "border border-zinc-200 bg-white text-zinc-600 hover:bg-red-50"
+                  }`}
+                >
+                  All
+                </button>
+                {allLanguages.map((lng) => (
+                  <button
+                    key={lng}
+                    type="button"
+                    onClick={() => {
+                      setSelected(null);
+                      setLanguageFilter((prev) => {
+                        if (prev.includes("all")) {
+                          return [lng];
+                        }
+                        if (prev.includes(lng)) {
+                          const next = prev.filter((v) => v !== lng);
+                          return next.length === 0 ? ["all"] : next;
+                        }
+                        return [...prev, lng];
+                      });
+                    }}
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                      languageFilter.includes(lng)
+                        ? "bg-red-600 text-white"
+                        : "border border-zinc-200 bg-white text-zinc-600 hover:bg-red-50"
+                    }`}
+                  >
+                    {lng}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -581,7 +682,11 @@ export function SankeyFlow({ nodes, links, clientIds: propClientIds }: SankeyPro
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: LAYER_COLORS.output }} /> Output
         </span>
         <span className="ml-auto font-medium text-zinc-400">
-          {clientFilter !== "all" && <span className="mr-2 text-red-500">{clientFilter}</span>}
+          {!clientFilter.includes("all") && clientFilter.length > 0 && (
+            <span className="mr-2 text-red-500">
+              {clientFilter.join(", ")}
+            </span>
+          )}
           {activeLinks.length} connections · {totalVideos.toLocaleString()} videos
         </span>
       </div>
@@ -724,11 +829,14 @@ export function ClientUserDrilldown({
     <div className="flex h-full flex-col rounded-xl border border-red-100 bg-white/70 shadow-sm shadow-red-50">
       {/* Header */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-red-100/60 px-4 py-3">
-        <div>
-          <h3 className="text-sm font-semibold text-zinc-900">Client & User Performance</h3>
-          <p className="text-xs text-zinc-500">
-            Ranked by published count — click a client to drill into its users
-          </p>
+        <div className="flex items-start gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-zinc-900">Client & User Performance</h3>
+            <p className="text-xs text-zinc-500">
+              Ranked by published count — click a client to drill into its users
+            </p>
+          </div>
+          <DefinitionButton definition="Client ranking by published count with publish rate. Expand a client to see its users. Filter: All, Top 10, or Bottom 10." />
         </div>
         <div className="flex gap-1 rounded-full border border-red-100 bg-white/80 px-1 py-0.5 shadow-sm">
           {filterBtn("all", "All")}
@@ -829,11 +937,14 @@ export function PlatformStackedChart({
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-red-100 bg-white/70 p-4 shadow-sm shadow-red-50">
-      <div className="mb-3 shrink-0">
-        <h3 className="text-sm font-semibold text-zinc-900">Platform Publishing Mix</h3>
-        <p className="text-xs text-zinc-500">
-          Content type distribution per platform (% of published videos)
-        </p>
+      <div className="mb-3 shrink-0 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-900">Platform Publishing Mix</h3>
+          <p className="text-xs text-zinc-500">
+            Content type distribution per platform (% of published videos)
+          </p>
+        </div>
+        <DefinitionButton definition="100% stacked bar chart: share of each output type per platform. Shows which formats dominate each platform." />
       </div>
       <div className="min-h-0 flex-1" style={{ minHeight: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -901,11 +1012,14 @@ export function VelocityChart({ data }: { data: VelocityRow[] }) {
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-red-100 bg-white/70 p-4 shadow-sm shadow-red-50">
-      <div className="mb-3 shrink-0">
-        <h3 className="text-sm font-semibold text-zinc-900">Production Velocity</h3>
-        <p className="text-xs text-zinc-500">
-          Upload → Publish turnaround (hours) per platform — hover for details
-        </p>
+      <div className="mb-3 shrink-0 flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-900">Production Velocity</h3>
+          <p className="text-xs text-zinc-500">
+            Upload → Publish turnaround (hours) per platform — hover for details
+          </p>
+        </div>
+        <DefinitionButton definition="Box-plot style: min, Q1, median, Q3, max hours from upload to publish per platform. IQR = interquartile range." />
       </div>
       <div className="min-h-0 flex-1" style={{ minHeight: 220 }}>
         <ResponsiveContainer width="100%" height="100%">

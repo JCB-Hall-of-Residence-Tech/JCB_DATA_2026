@@ -1,6 +1,7 @@
 "use client";
 
 import "@/app/dashboard/page2/components/ChartSetup";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 import { Line } from "react-chartjs-2";
 import type { ChartOptions } from "chart.js";
 import { CHART_FONT } from "./ChartSetup";
@@ -13,11 +14,14 @@ interface TrendChartProps {
 
 const lineConfigs = [
   { label: "Uploaded", key: "uploaded" as const, color: "#e9434a" },
+  { label: "Processed", key: "processed" as const, color: "#f59e0b" },
   { label: "Published", key: "published" as const, color: "#10b981" },
 ];
 
 export default function TrendChart({ data }: TrendChartProps) {
-  const [visibleLines, setVisibleLines] = useState([true, true]);
+  const [visibleLines, setVisibleLines] = useState(
+    () => new Array(lineConfigs.length).fill(true) as boolean[]
+  );
 
   const labels = data.map((d) => d.month);
 
@@ -79,9 +83,12 @@ export default function TrendChart({ data }: TrendChartProps) {
 
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
-        Uploaded vs Published Over Time
-      </h4>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+          Uploaded vs Processed vs Published Over Time
+        </h4>
+        <DefinitionButton definition="Monthly trend of uploaded, processed (created), and published counts. Toggle lines to compare." />
+      </div>
       <div className="flex gap-2 mb-3 flex-wrap">
         {lineConfigs.map((cfg, i) => (
           <label

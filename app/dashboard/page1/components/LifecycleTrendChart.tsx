@@ -7,6 +7,7 @@ import { CHART_FONT } from "@/app/dashboard/page2/components/ChartSetup";
 import { CHART_COLORS } from "@/app/dashboard/page2/components/ChartSetup";
 import type { LifecycleTrendData } from "./types";
 import { useState, useMemo } from "react";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 
 interface LifecycleTrendChartProps {
   data: LifecycleTrendData;
@@ -108,9 +109,12 @@ export default function LifecycleTrendChart({ data }: LifecycleTrendChartProps) 
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
-        Interactive Lifecycle Trend
-      </h4>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+          Interactive Lifecycle Trend
+        </h4>
+        <DefinitionButton definition="Monthly trend of uploaded count or duration per client. Toggle Y-axis and select clients to compare." />
+      </div>
       <div className="flex flex-wrap gap-3 mb-3">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">

@@ -93,7 +93,7 @@ export default function Page3() {
         </div>
 
         {/* Middle row: Content Flow Network (full width) */}
-        <div style={{ minHeight: 460 }}>
+        <div style={{ height: 400 }}>
           <SankeyFlow nodes={data.sankey.nodes} links={data.sankey.links} clientIds={data.sankey.clientIds} />
         </div>
 

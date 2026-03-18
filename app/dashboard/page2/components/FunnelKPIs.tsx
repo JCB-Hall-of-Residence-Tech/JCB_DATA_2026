@@ -1,6 +1,7 @@
 "use client";
 
 import type { KPIs } from "./types";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 
 interface FunnelKPIsProps {
   kpis: KPIs;
@@ -18,12 +19,22 @@ export default function FunnelKPIs({ kpis }: FunnelKPIsProps) {
       value: kpis.totalUploaded,
       color: "border-red-200 bg-red-50/50",
       textColor: "text-red-600",
+      definition: "Total videos ingested into the system (uploaded count).",
+    },
+    {
+      label: "Processed",
+      value: kpis.totalProcessed,
+      color: "border-amber-200 bg-amber-50/50",
+      textColor: "text-amber-600",
+      definition:
+        "Total pieces of content processed by the AI pipeline (created outputs).",
     },
     {
       label: "Published",
       value: kpis.totalPublished,
       color: "border-emerald-200 bg-emerald-50/50",
       textColor: "text-emerald-600",
+      definition: "Total videos that have been published to an output platform.",
     },
     {
       label: "Publish Rate",
@@ -34,18 +45,22 @@ export default function FunnelKPIs({ kpis }: FunnelKPIsProps) {
           ? "border-emerald-200 bg-emerald-50/50"
           : "border-red-200 bg-red-50/50",
       textColor: pubRate >= 30 ? "text-emerald-600" : "text-red-600",
+      definition: "Published ÷ Uploaded × 100. Higher means more uploads reach publishing.",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {items.map((item) => (
         <div
           key={item.label}
-          className={`rounded-xl border p-4 transition-shadow hover:shadow-md ${item.color}`}
+          className={`rounded-xl border p-4 transition-shadow hover:shadow-md ${item.color} relative`}
         >
-          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-            {item.label}
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+              {item.label}
+            </div>
+            <DefinitionButton definition={item.definition} />
           </div>
           <div className={`text-xl font-bold mt-1 ${item.textColor}`}>
             {item.value.toLocaleString()}

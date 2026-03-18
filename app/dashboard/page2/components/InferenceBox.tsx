@@ -1,6 +1,7 @@
 "use client";
 
 import type { BreakdownItem } from "./types";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 
 interface InferenceBoxProps {
   data: BreakdownItem[];
@@ -48,12 +49,15 @@ export default function InferenceBox({
 
   return (
     <div
-      className={`rounded-xl border p-3 flex items-start gap-3 text-xs leading-relaxed ${
+      className={`rounded-xl border p-3 flex items-start gap-3 text-xs leading-relaxed relative ${
         isAlert
           ? "border-red-200 bg-red-50/70"
           : "border-emerald-200 bg-emerald-50/70"
       }`}
     >
+      <div className="absolute top-2 right-2">
+        <DefinitionButton definition={isAlert ? "Flags high-volume entities with low publish rate or workflow issues." : "Highlights top performers by publish rate and volume."} />
+      </div>
       <div
         className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${
           isAlert ? "bg-red-500 text-white" : "bg-emerald-500 text-white"

@@ -1,10 +1,11 @@
 "use client";
 
 import "@/app/dashboard/page2/components/ChartSetup";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 import { Bar } from "react-chartjs-2";
 import type { ChartOptions } from "chart.js";
 import { CHART_COLORS, CHART_FONT } from "./ChartSetup";
-import type { BreakdownItem, ChartMode } from "./types";
+import type { BreakdownItem, ChartMode, MetricKey } from "./types";
 import { useState } from "react";
 
 const TOP_N = 8;
@@ -15,11 +16,24 @@ interface BarChartProps {
   dim1Label: string;
   dim2Label: string;
   chartMode: ChartMode;
-  metric: "count" | "published";
+  metric: MetricKey;
 }
 
-function getMetricVal(item: BreakdownItem, metric: string) {
-  return metric === "published" ? item.pb : item.up;
+function getMetricVal(item: BreakdownItem, metric: MetricKey) {
+  switch (metric) {
+    case "uploaded_count":
+      return item.up;
+    case "processed_count":
+      return item.pr;
+    case "published_count":
+      return item.pb;
+    case "uploaded_duration":
+      return item.durationUploaded ?? 0;
+    case "processed_duration":
+      return item.durationCreated ?? 0;
+    case "published_duration":
+      return item.durationPublished ?? 0;
+  }
 }
 
 export default function AnalysisBarChart({
@@ -118,9 +132,12 @@ export default function AnalysisBarChart({
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-3 flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-          {title}
-        </h4>
+        <div className="flex items-center gap-2">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+            {title}
+          </h4>
+          <DefinitionButton definition={`Cross-tabulation of ${dim1Label} by ${dim2Label}. Shows uploaded or published count. Stacked or grouped by filter.`} />
+        </div>
         {totalPages > 1 && (
           <div className="flex items-center gap-1">
             <button

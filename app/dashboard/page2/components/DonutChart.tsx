@@ -1,33 +1,64 @@
 "use client";
 
 import "@/app/dashboard/page2/components/ChartSetup";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 import { Doughnut } from "react-chartjs-2";
 import type { ChartOptions } from "chart.js";
 import { CHART_COLORS, CHART_FONT } from "./ChartSetup";
-import type { BreakdownItem } from "./types";
+import type { BreakdownItem, MetricKey } from "./types";
 
 const TOP_N = 6;
 
 interface DonutChartProps {
   data: BreakdownItem[];
   title: string;
-  metric: "count" | "published";
+  metric: MetricKey;
+}
+
+function getMetricVal(item: BreakdownItem, metric: MetricKey) {
+  switch (metric) {
+    case "uploaded_count":
+      return item.up;
+    case "processed_count":
+      return item.pr;
+    case "published_count":
+      return item.pb;
+    case "uploaded_duration":
+      return item.durationUploaded ?? 0;
+    case "processed_duration":
+      return item.durationCreated ?? 0;
+    case "published_duration":
+      return item.durationPublished ?? 0;
+  }
 }
 
 export default function DonutChart({ data, title, metric }: DonutChartProps) {
-  const sorted = [...data].sort((a, b) =>
-    metric === "published" ? b.pb - a.pb : b.up - a.up
+  const sorted = [...data].sort(
+    (a, b) => getMetricVal(b, metric) - getMetricVal(a, metric)
   );
   const top = sorted.slice(0, TOP_N);
   const rest = sorted.slice(TOP_N);
-  const restSum = rest.reduce(
-    (s, d) => s + (metric === "published" ? d.pb : d.up),
-    0
-  );
+  const restSum = rest.reduce((s, d) => s + getMetricVal(d, metric), 0);
 
-  const items = restSum > 0 ? [...top, { name: "Others", up: restSum, pb: restSum } as BreakdownItem] : top;
+  const items =
+    restSum > 0
+      ? [
+          ...top,
+          {
+            name: "Others",
+            up: restSum,
+            pr: restSum,
+            pb: restSum,
+            durationUploaded: restSum,
+            durationCreated: restSum,
+            durationPublished: restSum,
+            rate: 0,
+            id: "others",
+          } as BreakdownItem,
+        ]
+      : top;
   const labels = items.map((d) => d.name);
-  const values = items.map((d) => (metric === "published" ? d.pb : d.up));
+  const values = items.map((d) => getMetricVal(d, metric));
   const total = values.reduce((a, b) => a + b, 0);
 
   const options: ChartOptions<"doughnut"> = {
@@ -68,9 +99,14 @@ export default function DonutChart({ data, title, metric }: DonutChartProps) {
 
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-3 flex flex-col gap-2">
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-        {title}
-      </h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+          {title}
+        </h4>
+        <DefinitionButton
+          definition={`Share of the selected metric by ${title.toLowerCase()}. Top items shown; rest grouped as Others.`}
+        />
+      </div>
       <div className="h-[200px] sm:h-[220px]">
         <Doughnut
           data={{

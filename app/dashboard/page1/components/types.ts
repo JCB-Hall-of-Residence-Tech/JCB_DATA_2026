@@ -31,7 +31,9 @@ export interface Page1KPIs {
   prevMonthCreated?: number;
 
   totalCreated: number;
+  totalCreatedDurationFormatted?: string;
   totalCreatedTrendPct: number;
+  currentMonthCreatedDurationFormatted?: string;
 
   aiContentMultiplier: number;
   aiMultiplierTrendPct: number;
@@ -58,7 +60,8 @@ export interface LifecycleTrendData {
 export interface PipelineStatsData {
   totalUploaded: number;
   totalProcessed: number;
-  monthly: { month: string; uploaded: number; created: number }[];
+  totalPublished: number;
+  monthly: { month: string; uploaded: number; created: number; published: number }[];
 }
 
 export interface EfficiencyPoint {

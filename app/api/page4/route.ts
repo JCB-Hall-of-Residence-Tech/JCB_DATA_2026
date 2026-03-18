@@ -88,15 +88,7 @@ export async function GET() {
           ROUND(CASE WHEN total_created_duration IS NOT NULL AND TRIM(COALESCE(total_created_duration::text, '')) != ''
             THEN EXTRACT(EPOCH FROM (total_created_duration::text::interval)) ELSE 0 END / 3600, 1)::numeric AS created_hours
         FROM monthly_duration_summary
-        ORDER BY
-          CASE
-            WHEN month LIKE 'Jan%' THEN 1  WHEN month LIKE 'Feb%' THEN 2
-            WHEN month LIKE 'Mar%' THEN 3  WHEN month LIKE 'Apr%' THEN 4
-            WHEN month LIKE 'May%' THEN 5  WHEN month LIKE 'Jun%' THEN 6
-            WHEN month LIKE 'Jul%' THEN 7  WHEN month LIKE 'Aug%' THEN 8
-            WHEN month LIKE 'Sep%' THEN 9  WHEN month LIKE 'Oct%' THEN 10
-            WHEN month LIKE 'Nov%' THEN 11 WHEN month LIKE 'Dec%' THEN 12
-          END, client_id
+        ORDER BY month, client_id
       `),
 
       // 6. Client share of billing hours
@@ -280,10 +272,12 @@ export async function GET() {
       : Math.round((Number(dur.total_published_hours) / Number(dur.total_created_hours)) * 1000) / 10;
     const atRiskCount = riskTableRes.rows.filter((r) => Number(r.total_published) < 100).length;
 
-    const monthOrder = [
-      "Mar, 2025","Apr, 2025","May, 2025","Jun, 2025","Jul, 2025","Aug, 2025",
-      "Sep, 2025","Oct, 2025","Nov, 2025","Dec, 2025","Jan, 2026","Feb, 2026",
-    ];
+    const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const formatMonth = (ym: string) => {
+      const [y, m] = String(ym).split("-");
+      const idx = parseInt(m || "1", 10) - 1;
+      return `${MONTH_NAMES[idx] ?? m}, ${y ?? ""}`;
+    };
     const monthMap = new Map<string, Record<string, number>>();
     const clientIds = new Set<string>();
     for (const r of monthlyContribRes.rows) {
@@ -291,7 +285,8 @@ export async function GET() {
       if (!monthMap.has(r.month)) monthMap.set(r.month, {});
       monthMap.get(r.month)![r.client_id] = Number(r.created_hours);
     }
-    const monthlyContribution = monthOrder.filter((m) => monthMap.has(m)).map((m) => ({ month: m, ...monthMap.get(m)! }));
+    const sortedMonths = [...monthMap.keys()].sort();
+    const monthlyContribution = sortedMonths.map((ym) => ({ month: formatMonth(ym), ...monthMap.get(ym)! }));
 
     const outputTypes = new Set<string>();
     const featureMatrix: Record<string, Record<string, { created: number; published: number }>> = {};

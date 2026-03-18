@@ -103,18 +103,18 @@ export default function Page1Dashboard() {
 
         {/* Tier 3: Operational Drivers - 3 equal columns */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="min-h-[360px]">
+          {/* <div className="min-h-[360px]">
             <EfficiencyMatrix data={data.efficiencyMatrix} />
-          </div>
+          </div> */}
           <div>
             <TopFormatsChart
               data={data.topFormatsOverTime}
               outputTypes={data.topFormatsOutputTypes}
             />
           </div>
-          <div>
+          {/* <div>
             <DataHealthTable alerts={data.dataHealthAlerts} />
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

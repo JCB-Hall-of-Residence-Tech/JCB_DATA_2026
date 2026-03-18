@@ -1,6 +1,7 @@
 "use client";
 
 import type { DataHealthAlert } from "./types";
+import { DefinitionButton } from "@/components/ui/DefinitionButton";
 
 interface DataHealthTableProps {
   alerts: DataHealthAlert[];
@@ -22,12 +23,17 @@ export default function DataHealthTable({ alerts }: DataHealthTableProps) {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-3">
-        Data Health Alert Board
-      </h4>
-      <p className="text-[10px] text-gray-500 mb-3">
-        Published videos with missing platform or user data
-      </p>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+            Data Health Alert Board
+          </h4>
+          <p className="text-[10px] text-gray-500 mt-0.5">
+            Published videos with missing platform or user data
+          </p>
+        </div>
+        <DefinitionButton definition="Published videos with missing platform or user data. Flags data quality gaps for remediation." />
+      </div>
       <div className="overflow-x-auto rounded-lg border border-red-200 bg-white">
         <table className="w-full text-xs">
           <thead>
