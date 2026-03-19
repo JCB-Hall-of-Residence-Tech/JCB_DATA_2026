@@ -2,6 +2,7 @@
 
 import "@/app/dashboard/page2/components/ChartSetup";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 import { Doughnut } from "react-chartjs-2";
 import type { ChartOptions } from "chart.js";
 import { CHART_COLORS, CHART_FONT } from "./ChartSetup";
@@ -103,9 +104,12 @@ export default function DonutChart({ data, title, metric }: DonutChartProps) {
         <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
           {title}
         </h4>
-        <DefinitionButton
-          definition={`Share of the selected metric by ${title.toLowerCase()}. Top items shown; rest grouped as Others.`}
-        />
+        <div className="flex items-center gap-1">
+          <DefinitionButton
+            definition={`Share of the selected metric by ${title.toLowerCase()}. Top items shown; rest grouped as Others.`}
+          />
+          <InsightButton page="page2" widget="multi_dim_donut" title={`${title} insight`} />
+        </div>
       </div>
       <div className="h-[200px] sm:h-[220px]">
         <Doughnut

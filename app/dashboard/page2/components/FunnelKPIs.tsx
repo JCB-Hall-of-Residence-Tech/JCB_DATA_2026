@@ -2,6 +2,7 @@
 
 import type { KPIs } from "./types";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 
 interface FunnelKPIsProps {
   kpis: KPIs;
@@ -60,7 +61,10 @@ export default function FunnelKPIs({ kpis }: FunnelKPIsProps) {
             <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
               {item.label}
             </div>
-            <DefinitionButton definition={item.definition} />
+            <div className="flex items-center gap-1">
+              <DefinitionButton definition={item.definition} />
+              <InsightButton page="page2" widget={`funnel_kpi_${item.label.toLowerCase().replace(/\s+/g, "_")}`} title={`${item.label} insight`} />
+            </div>
           </div>
           <div className={`text-xl font-bold mt-1 ${item.textColor}`}>
             {item.value.toLocaleString()}

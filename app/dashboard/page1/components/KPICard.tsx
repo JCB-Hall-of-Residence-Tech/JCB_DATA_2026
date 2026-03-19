@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { InsightButton } from "@/components/ui/InsightButton";
 
 interface KPICardProps {
   label: string;
@@ -19,6 +20,8 @@ interface KPICardProps {
   currentMonthLabel?: string;
   /** Label for prev period (e.g. "Feb 2024") */
   prevLabel?: string;
+  insightPage: string;
+  insightWidget: string;
 }
 
 export default function KPICard({
@@ -32,6 +35,8 @@ export default function KPICard({
   prevValue,
   currentMonthLabel,
   prevLabel = "prev month",
+  insightPage,
+  insightWidget,
 }: KPICardProps) {
   const [showDefinition, setShowDefinition] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -74,22 +79,24 @@ export default function KPICard({
 
   return (
     <div className="relative" ref={popoverRef}>
-      <button
-        type="button"
-        onClick={() => setShowDefinition((v) => !v)}
-        className="w-full rounded-lg border border-gray-200 p-2.5 text-left transition-all hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:ring-offset-1"
-      >
+      <div className="w-full rounded-lg border border-gray-200 p-2.5 text-left transition-all hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-md">
         <div className="flex items-start justify-between gap-2">
           <div className="text-[9px] font-semibold uppercase tracking-wider text-gray-400 min-w-0">
             {label}
           </div>
-          <span
-            className={`shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium ${
-              showDefinition ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-400"
-            }`}
-          >
-            ?
-          </span>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowDefinition((v) => !v)}
+              className={`shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium transition-colors ${
+                showDefinition ? "bg-emerald-100 text-emerald-600" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              }`}
+              aria-label="Definition"
+            >
+              ?
+            </button>
+            <InsightButton page={insightPage} widget={insightWidget} title={`${label} insight`} />
+          </div>
         </div>
         <div className="text-lg font-bold text-gray-900 mt-1">{value}</div>
         {allTimeValue && (
@@ -118,7 +125,7 @@ export default function KPICard({
             )}
           </div>
         )}
-      </button>
+      </div>
 
       {/* Definition popover */}
       {showDefinition && (

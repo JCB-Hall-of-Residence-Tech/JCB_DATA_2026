@@ -2,6 +2,7 @@
 
 import type { KPIs } from "./types";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 
 interface FunnelBarsProps {
   kpis: KPIs;
@@ -28,7 +29,10 @@ export default function FunnelBars({ kpis }: FunnelBarsProps) {
           Uploaded → Published Funnel
           <span className="flex-1 h-px bg-gray-100" />
         </h4>
-        <DefinitionButton definition="Visual funnel from uploaded to published. Shows conversion and drop-off between stages." />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition="Visual funnel from uploaded to published. Shows conversion and drop-off between stages." />
+          <InsightButton page="page2" widget="funnel_bars" title="Uploaded to Published Funnel insight" />
+        </div>
       </div>
       <div className="flex flex-col gap-3">
         {stages.map((s) => (

@@ -2,6 +2,7 @@
 
 import type { BreakdownItem } from "./types";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 
 interface InferenceBoxProps {
   data: BreakdownItem[];
@@ -56,7 +57,10 @@ export default function InferenceBox({
       }`}
     >
       <div className="absolute top-2 right-2">
-        <DefinitionButton definition={isAlert ? "Flags high-volume entities with low publish rate or workflow issues." : "Highlights top performers by publish rate and volume."} />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition={isAlert ? "Flags high-volume entities with low publish rate or workflow issues." : "Highlights top performers by publish rate and volume."} />
+          <InsightButton page="page2" widget={isAlert ? "dropoff_alert" : "key_insight"} title={isAlert ? "Drop-off Alert insight" : "Key Insight"} />
+        </div>
       </div>
       <div
         className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${

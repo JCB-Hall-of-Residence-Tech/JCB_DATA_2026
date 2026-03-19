@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 import type { BreakdownItem, DimensionKey, SortKey } from "./types";
 
 interface BreakdownListProps {
@@ -36,7 +37,10 @@ export default function BreakdownList({ data, dimensions }: BreakdownListProps) 
           <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
             Breakdown
           </h4>
-          <DefinitionButton definition="Ranked list by dimension (channel, client, etc.). Processed = AI-generated; Published = live. Rate = published ÷ processed × 100." />
+          <div className="flex items-center gap-1">
+            <DefinitionButton definition="Ranked list by dimension (channel, client, etc.). Processed = AI-generated; Published = live. Rate = published ÷ processed × 100." />
+            <InsightButton page="page2" widget="breakdown_list" title="Breakdown insight" />
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 mr-1">

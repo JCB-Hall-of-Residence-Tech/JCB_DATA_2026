@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie, Legend,
@@ -70,6 +71,7 @@ export function KPIInsightCards({ kpis }: { kpis: Page4KPIs }) {
             <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider leading-tight">{c.label}</p>
             <div className="flex items-center gap-1">
               <DefinitionButton definition={c.definition} />
+              <InsightButton page="page4" widget={`kpi_${c.label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`} title={`${c.label} insight`} />
               <span className="text-xs opacity-60">{c.icon}</span>
             </div>
           </div>
@@ -93,7 +95,10 @@ export function MonthlyContributionChart({ data, clientIds }: { data: Record<str
           <h3 className="text-sm font-bold text-gray-900">Monthly Client Billing Contribution</h3>
           <p className="text-[10px] text-gray-400 mt-0.5">Processed hours stacked by client</p>
         </div>
-        <DefinitionButton definition="Stacked area chart of processed hours per client per month. Shows each client's contribution to total capacity over time." />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition="Stacked area chart of processed hours per client per month. Shows each client's contribution to total capacity over time." />
+          <InsightButton page="page4" widget="monthly_client_billing_contribution" title="Monthly Client Billing Contribution insight" />
+        </div>
       </div>
       <div className="flex-1 min-h-0 p-2">
         <ResponsiveContainer width="100%" height="100%">
@@ -137,7 +142,10 @@ export function ClientMomentumTracker({ data, clientIds }: { data: Record<string
           <h3 className="text-sm font-bold text-gray-900">Client Growth Momentum</h3>
           <p className="text-[10px] text-gray-400 mt-0.5">Quarterly trend shift per account</p>
         </div>
-        <DefinitionButton definition="Compares recent 3 months vs. prior 3 months per client. Growth % shows whether each account is accelerating or decelerating in processed volume." />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition="Compares recent 3 months vs. prior 3 months per client. Growth % shows whether each account is accelerating or decelerating in processed volume." />
+          <InsightButton page="page4" widget="client_growth_momentum" title="Client Growth Momentum insight" />
+        </div>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-1.5">
         {clientRows.map((row) => (
@@ -218,6 +226,7 @@ export function ClientShareDonut({
             </button>
           )}
           <DefinitionButton definition="Donut chart showing each client's share of total processed hours. Click a segment to drill down into that client. Identifies which accounts drive the most capacity usage." />
+          <InsightButton page="page4" widget="client_processing_share" title="Client Processing Share insight" />
         </div>
       </div>
       <div className="flex-1 p-2 min-h-0 overflow-auto">
@@ -343,6 +352,7 @@ export function AmplificationChart({
             </button>
           )}
           <DefinitionButton definition="Processed count ÷ uploaded count per client. Click a client to drill down. Shows how much content each upload generates (e.g. 5× means 1 upload yields 5 outputs)." />
+          <InsightButton page="page4" widget="content_amplification_factor" title="Content Amplification Factor insight" />
         </div>
       </div>
       <div className="flex-1 min-h-0 p-3 flex flex-col gap-2 overflow-auto">
@@ -475,6 +485,7 @@ export function PlatformHoursChart({
             </button>
           )}
           <DefinitionButton definition="Total hours of content published to each platform. Use 'Show all platforms' to see client breakdown for every platform. Aggregated from channel_wise_publishing_duration." />
+          <InsightButton page="page4" widget="published_hours_by_platform" title="Published Duration by Platform insight" />
         </div>
       </div>
       <div className="flex-1 min-h-0 p-4 overflow-auto">
@@ -594,6 +605,7 @@ export function LanguageHeatmap({ matrix }: { matrix: LanguageMatrix }) {
             <p className="text-[11px] text-gray-400 mt-0.5">Which languages each account processes</p>
           </div>
           <DefinitionButton definition="Heatmap of uploaded, processing, and published metrics (hours/counts) by client and language. Shows language activity depth per account." />
+          <InsightButton page="page4" widget="language_coverage_heatmap" title="Language Coverage insight" />
         </div>
         <select value={metric} onChange={(e) => setMetric(e.target.value as typeof metric)}
           className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-red-400">
@@ -664,6 +676,7 @@ export function FeatureAdoptionHeatmap({ matrix }: { matrix: FeatureMatrix }) {
             <p className="text-[11px] text-gray-400 mt-0.5">Output type usage intensity across accounts</p>
           </div>
           <DefinitionButton definition="Heatmap of published or processed count by client and output type (e.g. Shorts, Long-form). Shows feature adoption intensity." />
+          <InsightButton page="page4" widget="feature_adoption_heatmap" title="Feature Adoption insight" />
         </div>
         <select value={metric} onChange={(e) => setMetric(e.target.value as "published" | "created")}
           className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-red-400">
@@ -719,6 +732,7 @@ export function DataQualityMonitor({ dq }: { dq: DataQuality }) {
             <p className="text-[11px] text-gray-400 mt-0.5">Field-level completeness across {dq.total.toLocaleString()} videos</p>
           </div>
           <DefinitionButton definition="Counts of videos with missing input type, language, platform, or URL. Lower counts indicate better data quality." />
+          <InsightButton page="page4" widget="data_quality_monitor" title="Data Quality Monitor insight" />
         </div>
         <div className="flex items-center gap-2">
           <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -770,7 +784,10 @@ export function RiskTable({ data }: { data: RiskRow[] }) {
           <h3 className="text-sm font-bold text-gray-900">Client Risk & Underperformance Monitor</h3>
           <p className="text-[11px] text-gray-400 mt-0.5">Composite risk score from publish rate, data quality gaps, and feature adoption</p>
         </div>
-        <DefinitionButton definition="Risk score combines: publish rate (published/created), data issues (unknown input, missing platform/URL), and feature gap (unused output types). HIGH/MODERATE/HEALTHY." />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition="Risk score combines: publish rate (published/created), data issues (unknown input, missing platform/URL), and feature gap (unused output types). HIGH/MODERATE/HEALTHY." />
+          <InsightButton page="page4" widget="risk_underperformance_monitor" title="Risk Monitor insight" />
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -827,6 +844,7 @@ export function VideoExplorer({ data }: { data: VideoRow[] }) {
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-bold text-gray-900">Published Video Explorer</h3>
           <DefinitionButton definition="Searchable table of published videos with client, channel, user, output type, platform, and URL. Use filters to narrow results." />
+          <InsightButton page="page4" widget="published_video_explorer" title="Published Video Explorer insight" />
         </div>
         <div className="flex gap-2">
           <input type="text" placeholder="Search ID, client, channel, user..." value={search} onChange={(e) => setSearch(e.target.value)}

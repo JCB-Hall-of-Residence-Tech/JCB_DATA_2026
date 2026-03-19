@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import s from "./page5.module.css";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 
 const ALL_SUMMARY_TABLES = [
   "channel_processing_summary",
@@ -925,7 +926,10 @@ export default function Page5() {
               <h2>
                 <span className={s.icon}>⚠</span> Data Quality Alerts
               </h2>
-              <DefinitionButton definition="Automated checks for data completeness, consistency, and anomalies across summary tables. Critical = blocking; Warning = review; Info = FYI." />
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <DefinitionButton definition="Automated checks for data completeness, consistency, and anomalies across summary tables. Critical = blocking; Warning = review; Info = FYI." />
+                <InsightButton page="page5" widget="data_quality_alerts" title="Data Quality Alerts insight" />
+              </div>
             </div>
             <div
               style={{ display: "flex", alignItems: "center", gap: "10px" }}
@@ -1003,7 +1007,10 @@ export default function Page5() {
                 <h2>
                   <span className={s.icon}>🎬</span> Videos
                 </h2>
-                <DefinitionButton definition="Raw video records with client, channel, user, input/output type, platform, and publishing status. Search, filter, sort, and export." />
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <DefinitionButton definition="Raw video records with client, channel, user, input/output type, platform, and publishing status. Search, filter, sort, and export." />
+                  <InsightButton page="page5" widget="videos_table" title="Videos Table insight" />
+                </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <button
@@ -1049,7 +1056,10 @@ export default function Page5() {
             <div className={s.summaryHeader}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <span className={s.summaryTitle}>Summary Tables</span>
-                <DefinitionButton definition="Pre-aggregated views from the database. Each table summarizes processing, publishing, or duration by dimension (channel, user, month, etc.)." />
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <DefinitionButton definition="Pre-aggregated views from the database. Each table summarizes processing, publishing, or duration by dimension (channel, user, month, etc.)." />
+                  <InsightButton page="page5" widget="summary_tables" title="Summary Tables insight" />
+                </div>
               </div>
               <div style={{ position: "relative" }}>
                 <button
@@ -1147,7 +1157,10 @@ export default function Page5() {
                         <h3 title={TABLE_FULL_NAMES[t] || t}>
                           {TABLE_LABELS[t] || t}
                         </h3>
-                        <DefinitionButton definition={TABLE_DEFINITIONS[t] || "Summary table."} />
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <DefinitionButton definition={TABLE_DEFINITIONS[t] || "Summary table."} />
+                          <InsightButton page="page5" widget={`summary_${t}`} title={`${TABLE_FULL_NAMES[t] || t} insight`} />
+                        </div>
                       </div>
                       <div className={s.tableCardActions}>
                         <button

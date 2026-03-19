@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 import type { BreakdownItem, DimensionKey } from "./types";
 
 interface UCCTableProps {
@@ -33,7 +34,10 @@ export default function UCCTable({ data }: UCCTableProps) {
           <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
             Uploaded vs Published
           </h4>
-          <DefinitionButton definition="Table of uploaded and published counts by channel, client, or user. Rate = published ÷ uploaded × 100." />
+          <div className="flex items-center gap-1">
+            <DefinitionButton definition="Table of uploaded and published counts by channel, client, or user. Rate = published ÷ uploaded × 100." />
+            <InsightButton page="page2" widget="uploaded_vs_published_table" title="Uploaded vs Published insight" />
+          </div>
         </div>
         <div className="flex gap-1">
           {tabs.map((tab) => (

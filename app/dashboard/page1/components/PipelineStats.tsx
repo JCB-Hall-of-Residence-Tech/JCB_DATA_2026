@@ -3,6 +3,7 @@
 import type { PipelineStatsData } from "./types";
 import { useMemo } from "react";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 
 interface PipelineStatsProps {
   data: PipelineStatsData;
@@ -58,7 +59,10 @@ export default function PipelineStats({ data }: PipelineStatsProps) {
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-2.5">
       <div className="flex items-end justify-end mb-1.5">
-        <DefinitionButton definition="Total uploaded count (videos ingested) and total processed count (AI-generated outputs). Sparklines show monthly trend." />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition="Total uploaded count (videos ingested) and total processed count (AI-generated outputs). Sparklines show monthly trend." />
+          <InsightButton page="page1" widget="pipeline_stats" title="Pipeline Stats insight" />
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
         <div

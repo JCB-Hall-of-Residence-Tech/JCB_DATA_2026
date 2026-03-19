@@ -2,6 +2,7 @@
 
 import type { DataHealthAlert } from "./types";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 
 interface DataHealthTableProps {
   alerts: DataHealthAlert[];
@@ -32,7 +33,10 @@ export default function DataHealthTable({ alerts }: DataHealthTableProps) {
             Published videos with missing platform or user data
           </p>
         </div>
-        <DefinitionButton definition="Published videos with missing platform or user data. Flags data quality gaps for remediation." />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition="Published videos with missing platform or user data. Flags data quality gaps for remediation." />
+          <InsightButton page="page1" widget="data_health_alerts" title="Data Health Alerts insight" />
+        </div>
       </div>
       <div className="overflow-x-auto rounded-lg border border-red-200 bg-white">
         <table className="w-full text-xs">

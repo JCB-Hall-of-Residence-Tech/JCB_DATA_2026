@@ -2,6 +2,7 @@
 
 import "@/app/dashboard/page2/components/ChartSetup";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 import { Bar } from "react-chartjs-2";
 import type { ChartOptions } from "chart.js";
 import { CHART_COLORS, CHART_FONT } from "./ChartSetup";
@@ -136,7 +137,10 @@ export default function AnalysisBarChart({
           <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
             {title}
           </h4>
-          <DefinitionButton definition={`Cross-tabulation of ${dim1Label} by ${dim2Label}. Shows uploaded or published count. Stacked or grouped by filter.`} />
+          <div className="flex items-center gap-1">
+            <DefinitionButton definition={`Cross-tabulation of ${dim1Label} by ${dim2Label}. Shows uploaded or published count. Stacked or grouped by filter.`} />
+            <InsightButton page="page2" widget="multi_dim_bar" title={`${title} insight`} />
+          </div>
         </div>
         {totalPages > 1 && (
           <div className="flex items-center gap-1">

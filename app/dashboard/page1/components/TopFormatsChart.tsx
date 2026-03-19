@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 
 const PALETTE = [
   "#ef4444",
@@ -60,7 +61,10 @@ export default function TopFormatsChart({ data, outputTypes }: TopFormatsChartPr
             % breakdown of output type by month (published volume)
           </p>
         </div>
-        <DefinitionButton definition="Stacked bar chart of published volume by output type (e.g. Shorts, Long-form) per month. Shows format mix over time." />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition="Stacked bar chart of published volume by output type (e.g. Shorts, Long-form) per month. Shows format mix over time." />
+          <InsightButton page="page1" widget="top_formats" title="Top Formats insight" />
+        </div>
       </div>
       <div className="h-[240px]">
         <ResponsiveContainer width="100%" height="100%">

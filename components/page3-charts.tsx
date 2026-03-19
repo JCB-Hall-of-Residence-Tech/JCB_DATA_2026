@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 import {
   ScatterChart,
   Scatter,
@@ -131,7 +132,10 @@ export function EfficiencyMatrix({ data }: { data: EfficiencyPoint[] }) {
               Created vs Published per channel — {filtered.length} channel{filtered.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <DefinitionButton definition="Scatter plot of created count (x) vs published count (y) per channel. Higher publish rate = better efficiency. Filter by client." />
+          <div className="flex items-center gap-1">
+            <DefinitionButton definition="Scatter plot of created count (x) vs published count (y) per channel. Higher publish rate = better efficiency. Filter by client." />
+            <InsightButton page="page3" widget="efficiency_matrix" title="Efficiency Matrix insight" />
+          </div>
         </div>
         <div className="flex flex-wrap gap-1">
           <button
@@ -472,7 +476,10 @@ export function SankeyFlow({ nodes, links, clientIds: propClientIds }: SankeyPro
                   : "Select any node to explore its connections"}
               </p>
             </div>
-            <DefinitionButton definition="Sankey-style flow: Input types → Channels → Output types. Click a node to see incoming/outgoing connections. Filter by client." />
+            <div className="flex items-center gap-1">
+              <DefinitionButton definition="Sankey-style flow: Input types → Channels → Output types. Click a node to see incoming/outgoing connections. Filter by client." />
+              <InsightButton page="page3" widget="content_flow_network" title="Content Flow Network insight" />
+            </div>
           </div>
           {selected && (
             <button
@@ -836,7 +843,10 @@ export function ClientUserDrilldown({
               Ranked by published count — click a client to drill into its users
             </p>
           </div>
-          <DefinitionButton definition="Client ranking by published count with publish rate. Expand a client to see its users. Filter: All, Top 10, or Bottom 10." />
+          <div className="flex items-center gap-1">
+            <DefinitionButton definition="Client ranking by published count with publish rate. Expand a client to see its users. Filter: All, Top 10, or Bottom 10." />
+            <InsightButton page="page3" widget="client_user_drilldown" title="Client User Drilldown insight" />
+          </div>
         </div>
         <div className="flex gap-1 rounded-full border border-red-100 bg-white/80 px-1 py-0.5 shadow-sm">
           {filterBtn("all", "All")}
@@ -944,7 +954,10 @@ export function PlatformStackedChart({
             Content type distribution per platform (% of published videos)
           </p>
         </div>
-        <DefinitionButton definition="100% stacked bar chart: share of each output type per platform. Shows which formats dominate each platform." />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition="100% stacked bar chart: share of each output type per platform. Shows which formats dominate each platform." />
+          <InsightButton page="page3" widget="platform_stacked_chart" title="Platform Publishing Mix insight" />
+        </div>
       </div>
       <div className="min-h-0 flex-1" style={{ minHeight: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -1019,7 +1032,10 @@ export function VelocityChart({ data }: { data: VelocityRow[] }) {
             Upload → Publish turnaround (hours) per platform — hover for details
           </p>
         </div>
-        <DefinitionButton definition="Box-plot style: min, Q1, median, Q3, max hours from upload to publish per platform. IQR = interquartile range." />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition="Box-plot style: min, Q1, median, Q3, max hours from upload to publish per platform. IQR = interquartile range." />
+          <InsightButton page="page3" widget="velocity_chart" title="Production Velocity insight" />
+        </div>
       </div>
       <div className="min-h-0 flex-1" style={{ minHeight: 220 }}>
         <ResponsiveContainer width="100%" height="100%">

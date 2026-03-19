@@ -24,9 +24,13 @@ export function DefinitionButton({ definition, className = "" }: DefinitionButto
     <div className={`relative ${className}`} ref={ref}>
       <button
         type="button"
-        onClick={() => setShow((v) => !v)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setShow((v) => !v);
+        }}
         className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-medium text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
         aria-label="Definition"
+        title="Definition"
       >
         ?
       </button>

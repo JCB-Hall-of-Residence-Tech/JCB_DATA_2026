@@ -2,6 +2,7 @@
 
 import "@/app/dashboard/page2/components/ChartSetup";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
+import { InsightButton } from "@/components/ui/InsightButton";
 import { Line } from "react-chartjs-2";
 import type { ChartOptions } from "chart.js";
 import { CHART_FONT } from "./ChartSetup";
@@ -126,7 +127,10 @@ export default function TrendChart({ data, monthlyByClient }: TrendChartProps) {
         <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
           Uploaded vs Processed vs Published Over Time
         </h4>
-        <DefinitionButton definition="Monthly trend of uploaded, processed (created), and published counts. Click any month or data point to drill down into client-wise breakdown for that month." />
+        <div className="flex items-center gap-1">
+          <DefinitionButton definition="Monthly trend of uploaded, processed (created), and published counts. Click any month or data point to drill down into client-wise breakdown for that month." />
+          <InsightButton page="page2" widget="trend_chart" title="Trend Chart insight" />
+        </div>
       </div>
       <div className="flex gap-2 mb-3 flex-wrap">
         {lineConfigs.map((cfg, i) => (
