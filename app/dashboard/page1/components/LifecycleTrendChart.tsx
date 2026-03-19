@@ -16,6 +16,7 @@ interface LifecycleTrendChartProps {
 
 export default function LifecycleTrendChart({ data }: LifecycleTrendChartProps) {
   const [yAxisMode, setYAxisMode] = useState<"count" | "duration">("count");
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedClients, setSelectedClients] = useState<Set<string>>(
     () => new Set(data.clients.slice(0, 5))
   );
@@ -79,6 +80,13 @@ export default function LifecycleTrendChart({ data }: LifecycleTrendChartProps) 
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
+    onClick: (_event, elements) => {
+      if (elements.length > 0) {
+        const idx = elements[0].index;
+        const month = allMonths[idx] ?? null;
+        setSelectedMonth((prev) => (prev === month ? null : month));
+      }
+    },
     scales: {
       x: {
         grid: { color: "#e2e8f0" },
@@ -107,6 +115,18 @@ export default function LifecycleTrendChart({ data }: LifecycleTrendChartProps) 
     },
     animation: { duration: 350 },
   };
+
+  const monthDrillRows = selectedMonth
+    ? data.clients
+        .filter((clientId) => selectedClients.has(clientId))
+        .map((clientId) => {
+          const row = (data.byClient[clientId] ?? []).find((r) => r.month === selectedMonth);
+          const count = row?.count ?? 0;
+          const durationHours = (row?.duration ?? 0) / 3600;
+          return { clientId, count, durationHours };
+        })
+        .sort((a, b) => (yAxisMode === "count" ? b.count - a.count : b.durationHours - a.durationHours))
+    : [];
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-3 h-full flex flex-col min-h-0">
@@ -203,6 +223,32 @@ export default function LifecycleTrendChart({ data }: LifecycleTrendChartProps) 
           </div>
         )}
       </div>
+      {selectedMonth && (
+        <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+              Drilldown - {selectedMonth}
+            </p>
+            <button
+              type="button"
+              onClick={() => setSelectedMonth(null)}
+              className="rounded border border-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-500 hover:border-gray-300 hover:text-gray-700"
+            >
+              Close
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+            {monthDrillRows.map((r) => (
+              <div key={r.clientId} className="rounded border border-gray-100 bg-gray-50 px-2 py-1.5 text-[11px]">
+                <span className="font-semibold text-gray-700">{r.clientId}</span>
+                <span className="ml-2 text-gray-500">
+                  {yAxisMode === "count" ? `${r.count.toLocaleString()} uploads` : `${r.durationHours.toFixed(1)}h uploaded`}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

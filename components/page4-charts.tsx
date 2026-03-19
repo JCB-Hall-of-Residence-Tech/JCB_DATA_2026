@@ -56,6 +56,7 @@ function getClientColor(id: string, idx: number) {
    ================================================================ */
 
 export function KPIInsightCards({ kpis }: { kpis: Page4KPIs }) {
+  const [selectedKpi, setSelectedKpi] = useState<string | null>(null);
   const cards = [
     { label: "Total Processed Hours", value: `${kpis.totalCreatedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h`, sub: `${kpis.totalUploadedHours.toLocaleString("en-US",{maximumFractionDigits:0})}h uploaded · ${kpis.totalClients} clients`, icon: "⏱", valueColor: "text-gray-900", accent: "border-l-red-500", definition: "Total hours of content that have been fully processed (AI-generated) across all clients. Includes both uploaded and created duration." },
     { label: "Data Completeness", value: `${kpis.dataQualityPct}%`, sub: `${kpis.totalVideos.toLocaleString()} videos scanned`, icon: "✓", valueColor: kpis.dataQualityPct >= 95 ? "text-emerald-600" : "text-amber-500", accent: kpis.dataQualityPct >= 95 ? "border-l-emerald-500" : "border-l-amber-500", definition: "Percentage of videos with complete metadata (input type, language, platform, URL). Higher is better; 95%+ is healthy." },
@@ -77,6 +78,18 @@ export function KPIInsightCards({ kpis }: { kpis: Page4KPIs }) {
           </div>
           <p className={`text-xl font-black mt-0.5 ${c.valueColor}`}>{c.value}</p>
           <p className="text-[9px] text-gray-500 mt-0.5 leading-snug">{c.sub}</p>
+          <button
+            type="button"
+            onClick={() => setSelectedKpi((prev) => (prev === c.label ? null : c.label))}
+            className="mt-1 text-[10px] font-semibold text-gray-500 hover:text-gray-700"
+          >
+            {selectedKpi === c.label ? "Hide details" : "Drill down"}
+          </button>
+          {selectedKpi === c.label && (
+            <div className="mt-1 rounded-md border border-gray-100 bg-gray-50 p-1.5 text-[10px] text-gray-600">
+              {c.definition}
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -88,6 +101,8 @@ export function KPIInsightCards({ kpis }: { kpis: Page4KPIs }) {
    ================================================================ */
 
 export function MonthlyContributionChart({ data, clientIds }: { data: Record<string, string | number>[]; clientIds: string[] }) {
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const monthRow = data.find((r) => String(r.month) === selectedMonth);
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
       <div className="shrink-0 px-4 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-start justify-between gap-2">
@@ -102,7 +117,14 @@ export function MonthlyContributionChart({ data, clientIds }: { data: Record<str
       </div>
       <div className="flex-1 min-h-0 p-2">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
+          <AreaChart
+            data={data}
+            margin={{ top: 8, right: 16, bottom: 4, left: 0 }}
+            onClick={(state) => {
+              const month = state?.activeLabel;
+              if (month) setSelectedMonth((prev) => (prev === String(month) ? null : String(month)));
+            }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
             <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false}
               tickFormatter={(v: string) => { const [m, y] = v.split(", "); return `${m.slice(0,3)} '${y?.slice(2)??""}` }} />
@@ -116,6 +138,21 @@ export function MonthlyContributionChart({ data, clientIds }: { data: Record<str
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      {selectedMonth && monthRow && (
+        <div className="mx-2 mb-2 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-700">
+          <div className="mb-1 flex items-center justify-between">
+            <p className="font-semibold">Month drilldown: {selectedMonth}</p>
+            <button type="button" onClick={() => setSelectedMonth(null)} className="text-[10px] font-semibold text-gray-500 hover:text-gray-700">Close</button>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {clientIds.slice(0, 8).map((id) => (
+              <span key={id} className="rounded bg-gray-50 px-2 py-0.5 text-[10px]">
+                {id}: {Number(monthRow[id] ?? 0).toFixed(1)}h
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -125,6 +162,7 @@ export function MonthlyContributionChart({ data, clientIds }: { data: Record<str
    ================================================================ */
 
 export function ClientMomentumTracker({ data, clientIds }: { data: Record<string, string | number>[]; clientIds: string[] }) {
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const clientRows = useMemo(() => clientIds.map((id, idx) => {
     const series = data.map((m) => ({ month: String(m.month), value: Number(m[id] ?? 0) }));
     const recent = series.slice(-3), prev = series.slice(-6, -3);
@@ -149,7 +187,11 @@ export function ClientMomentumTracker({ data, clientIds }: { data: Record<string
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-1.5">
         {clientRows.map((row) => (
-          <div key={row.id} className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0">
+          <div
+            key={row.id}
+            className={`flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0 cursor-pointer ${selectedClient === row.id ? "bg-red-50/30 rounded-md px-1" : ""}`}
+            onClick={() => setSelectedClient((prev) => (prev === row.id ? null : row.id))}
+          >
             <div className="w-14 shrink-0">
               <p className="text-[11px] font-bold text-gray-800">{row.id}</p>
               <p className="text-[9px] text-gray-400">{row.total.toFixed(0)}h</p>
@@ -168,6 +210,12 @@ export function ClientMomentumTracker({ data, clientIds }: { data: Record<string
             </div>
           </div>
         ))}
+        {selectedClient && (
+          <div className="mt-2 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-700">
+            <p className="font-semibold">{selectedClient} timeline drilldown</p>
+            <p className="mt-0.5 text-gray-600">Selected client trend is highlighted in the list above for quick diagnosis.</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -547,6 +595,7 @@ export function LanguageHeatmap({ matrix }: { matrix: LanguageMatrix }) {
     | "uploadedCount"
     | "publishedCount"
   >("processingHours");
+  const [selectedCell, setSelectedCell] = useState<{ client: string; language: string; value: number } | null>(null);
 
   const getLanguageMetricValue = useCallback(
     (clientId: string, language: string): number => {
@@ -599,13 +648,15 @@ export function LanguageHeatmap({ matrix }: { matrix: LanguageMatrix }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
       <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-center justify-between">
-        <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
           <div>
             <h3 className="text-sm font-bold text-gray-900">Language Coverage by Client</h3>
             <p className="text-[11px] text-gray-400 mt-0.5">Which languages each account processes</p>
           </div>
-          <DefinitionButton definition="Heatmap of uploaded, processing, and published metrics (hours/counts) by client and language. Shows language activity depth per account." />
-          <InsightButton page="page4" widget="language_coverage_heatmap" title="Language Coverage insight" />
+          <div className="ml-auto flex items-center gap-1">
+            <DefinitionButton definition="Heatmap of uploaded, processing, and published metrics (hours/counts) by client and language. Shows language activity depth per account." />
+            <InsightButton page="page4" widget="language_coverage_heatmap" title="Language Coverage insight" />
+          </div>
         </div>
         <select value={metric} onChange={(e) => setMetric(e.target.value as typeof metric)}
           className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-red-400">
@@ -632,12 +683,34 @@ export function LanguageHeatmap({ matrix }: { matrix: LanguageMatrix }) {
                 {matrix.languages.map((lang) => {
                   const val = getLanguageMetricValue(cid, lang);
                   const isHours = metric.includes("Hours");
-                  return <td key={lang} className="px-1 py-1"><div className={`rounded-md px-2 py-1.5 text-[10px] font-bold ${cellColor(val)}`}>{val > 0 ? (isHours ? `${val}h` : val.toLocaleString()) : "—"}</div></td>;
+                  return (
+                    <td key={lang} className="px-1 py-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCell({ client: cid, language: lang, value: val })}
+                        className={`w-full rounded-md px-2 py-1.5 text-[10px] font-bold ${cellColor(val)}`}
+                      >
+                        {val > 0 ? (isHours ? `${val}h` : val.toLocaleString()) : "—"}
+                      </button>
+                    </td>
+                  );
                 })}
               </tr>
             ))}
           </tbody>
         </table>
+        {selectedCell && (
+          <div className="mt-2 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-700">
+            <div className="mb-1 flex items-center justify-between">
+              <p className="font-semibold">Cell drilldown</p>
+              <button type="button" onClick={() => setSelectedCell(null)} className="text-[10px] font-semibold text-gray-500 hover:text-gray-700">Close</button>
+            </div>
+            <p>
+              {selectedCell.client} / {selectedCell.language}: {selectedCell.value.toLocaleString()}
+              {metric.includes("Hours") ? "h" : ""}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -649,6 +722,7 @@ export function LanguageHeatmap({ matrix }: { matrix: LanguageMatrix }) {
 
 export function FeatureAdoptionHeatmap({ matrix }: { matrix: FeatureMatrix }) {
   const [metric, setMetric] = useState<"published" | "created">("published");
+  const [selectedCell, setSelectedCell] = useState<{ client: string; outputType: string; value: number } | null>(null);
   const maxVal = useMemo(() => {
     let mx = 0;
     for (const cid of matrix.clients) for (const ot of matrix.outputTypes) {
@@ -670,13 +744,15 @@ export function FeatureAdoptionHeatmap({ matrix }: { matrix: FeatureMatrix }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
       <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-center justify-between">
-        <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
           <div>
             <h3 className="text-sm font-bold text-gray-900">Feature Adoption by Client</h3>
             <p className="text-[11px] text-gray-400 mt-0.5">Output type usage intensity across accounts</p>
           </div>
-          <DefinitionButton definition="Heatmap of published or processed count by client and output type (e.g. Shorts, Long-form). Shows feature adoption intensity." />
-          <InsightButton page="page4" widget="feature_adoption_heatmap" title="Feature Adoption insight" />
+          <div className="ml-auto flex items-center gap-1">
+            <DefinitionButton definition="Heatmap of published or processed count by client and output type (e.g. Shorts, Long-form). Shows feature adoption intensity." />
+            <InsightButton page="page4" widget="feature_adoption_heatmap" title="Feature Adoption insight" />
+          </div>
         </div>
         <select value={metric} onChange={(e) => setMetric(e.target.value as "published" | "created")}
           className="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-red-400">
@@ -698,12 +774,33 @@ export function FeatureAdoptionHeatmap({ matrix }: { matrix: FeatureMatrix }) {
                 <td className="text-[11px] font-semibold text-gray-700 px-2 py-1.5 text-left sticky left-0 bg-white">{cid}</td>
                 {matrix.outputTypes.map((ot) => {
                   const val = matrix.data[cid]?.[ot]?.[metric] ?? 0;
-                  return <td key={ot} className="px-1 py-1"><div className={`rounded-md px-2 py-1.5 text-[10px] font-bold ${cellColor(val)}`}>{val > 0 ? val.toLocaleString() : "—"}</div></td>;
+                  return (
+                    <td key={ot} className="px-1 py-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCell({ client: cid, outputType: ot, value: val })}
+                        className={`w-full rounded-md px-2 py-1.5 text-[10px] font-bold ${cellColor(val)}`}
+                      >
+                        {val > 0 ? val.toLocaleString() : "—"}
+                      </button>
+                    </td>
+                  );
                 })}
               </tr>
             ))}
           </tbody>
         </table>
+        {selectedCell && (
+          <div className="mt-2 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-700">
+            <div className="mb-1 flex items-center justify-between">
+              <p className="font-semibold">Cell drilldown</p>
+              <button type="button" onClick={() => setSelectedCell(null)} className="text-[10px] font-semibold text-gray-500 hover:text-gray-700">Close</button>
+            </div>
+            <p>
+              {selectedCell.client} / {selectedCell.outputType}: {selectedCell.value.toLocaleString()} {metric}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -726,13 +823,15 @@ export function DataQualityMonitor({ dq }: { dq: DataQuality }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
       <div className="shrink-0 px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-center justify-between">
-        <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
           <div>
             <h3 className="text-sm font-bold text-gray-900">Data Quality Monitor</h3>
             <p className="text-[11px] text-gray-400 mt-0.5">Field-level completeness across {dq.total.toLocaleString()} videos</p>
           </div>
-          <DefinitionButton definition="Counts of videos with missing input type, language, platform, or URL. Lower counts indicate better data quality." />
-          <InsightButton page="page4" widget="data_quality_monitor" title="Data Quality Monitor insight" />
+          <div className="ml-auto flex items-center gap-1">
+            <DefinitionButton definition="Counts of videos with missing input type, language, platform, or URL. Lower counts indicate better data quality." />
+            <InsightButton page="page4" widget="data_quality_monitor" title="Data Quality Monitor insight" />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">

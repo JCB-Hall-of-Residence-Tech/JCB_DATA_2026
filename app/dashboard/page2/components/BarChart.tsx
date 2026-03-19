@@ -46,6 +46,11 @@ export default function AnalysisBarChart({
   metric,
 }: BarChartProps) {
   const [page, setPage] = useState(0);
+  const [selectedPoint, setSelectedPoint] = useState<{
+    dim1: string;
+    dim2: string;
+    value: number;
+  } | null>(null);
   const stacked = chartMode === "stacked";
 
   const sortedDim1 = [...dim1Data].sort(
@@ -79,6 +84,15 @@ export default function AnalysisBarChart({
   const options: ChartOptions<"bar"> = {
     responsive: true,
     maintainAspectRatio: false,
+    onClick: (_event, elements, chart) => {
+      if (elements.length === 0) return;
+      const el = elements[0];
+      const dim1 = dim1Labels[el.index] ?? "";
+      const dim2 = topDim2[el.datasetIndex]?.name ?? "";
+      const rawVal = chart.data.datasets[el.datasetIndex]?.data?.[el.index];
+      const value = typeof rawVal === "number" ? rawVal : Number(rawVal ?? 0);
+      setSelectedPoint({ dim1, dim2, value });
+    },
     scales: {
       x: {
         stacked,
@@ -172,6 +186,27 @@ export default function AnalysisBarChart({
           Showing top {Math.min(TOP_N, visibleDim1.length)} of{" "}
           {sortedDim1.length} {dim1Label.toLowerCase()}s
         </p>
+      )}
+      {selectedPoint && (
+        <div className="mt-1 rounded-lg border border-gray-200 bg-white p-2.5">
+          <div className="mb-1.5 flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+              Drilldown Selection
+            </p>
+            <button
+              type="button"
+              onClick={() => setSelectedPoint(null)}
+              className="rounded border border-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-500 hover:border-gray-300 hover:text-gray-700"
+            >
+              Close
+            </button>
+          </div>
+          <p className="text-xs text-gray-700">
+            <span className="font-semibold">{selectedPoint.dim1}</span> x{" "}
+            <span className="font-semibold">{selectedPoint.dim2}</span>:{" "}
+            <span className="font-semibold">{selectedPoint.value.toLocaleString()}</span>
+          </p>
+        </div>
       )}
     </div>
   );

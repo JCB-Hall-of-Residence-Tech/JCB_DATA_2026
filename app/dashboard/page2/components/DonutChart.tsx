@@ -7,6 +7,7 @@ import { Doughnut } from "react-chartjs-2";
 import type { ChartOptions } from "chart.js";
 import { CHART_COLORS, CHART_FONT } from "./ChartSetup";
 import type { BreakdownItem, MetricKey } from "./types";
+import { useState } from "react";
 
 const TOP_N = 6;
 
@@ -34,6 +35,11 @@ function getMetricVal(item: BreakdownItem, metric: MetricKey) {
 }
 
 export default function DonutChart({ data, title, metric }: DonutChartProps) {
+  const [selectedSlice, setSelectedSlice] = useState<{
+    label: string;
+    value: number;
+    pct: number;
+  } | null>(null);
   const sorted = [...data].sort(
     (a, b) => getMetricVal(b, metric) - getMetricVal(a, metric)
   );
@@ -66,6 +72,14 @@ export default function DonutChart({ data, title, metric }: DonutChartProps) {
     responsive: true,
     maintainAspectRatio: false,
     cutout: "62%",
+    onClick: (_event, elements) => {
+      if (elements.length === 0) return;
+      const idx = elements[0].index;
+      const label = labels[idx] ?? "";
+      const value = values[idx] ?? 0;
+      const pct = total > 0 ? Math.round((value / total) * 1000) / 10 : 0;
+      setSelectedSlice({ label, value, pct });
+    },
     plugins: {
       legend: {
         position: "bottom",
@@ -128,6 +142,27 @@ export default function DonutChart({ data, title, metric }: DonutChartProps) {
           options={options}
         />
       </div>
+      {selectedSlice && (
+        <div className="rounded-lg border border-gray-200 bg-white p-2.5">
+          <div className="mb-1.5 flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+              Drilldown Selection
+            </p>
+            <button
+              type="button"
+              onClick={() => setSelectedSlice(null)}
+              className="rounded border border-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-500 hover:border-gray-300 hover:text-gray-700"
+            >
+              Close
+            </button>
+          </div>
+          <p className="text-xs text-gray-700">
+            <span className="font-semibold">{selectedSlice.label}</span>:{" "}
+            <span className="font-semibold">{selectedSlice.value.toLocaleString()}</span>{" "}
+            ({selectedSlice.pct}% of selected metric)
+          </p>
+        </div>
+      )}
     </div>
   );
 }

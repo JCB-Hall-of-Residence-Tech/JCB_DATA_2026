@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { KPIs } from "./types";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
 import { InsightButton } from "@/components/ui/InsightButton";
@@ -9,6 +10,7 @@ interface FunnelKPIsProps {
 }
 
 export default function FunnelKPIs({ kpis }: FunnelKPIsProps) {
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const pubRate =
     kpis.totalUploaded > 0
       ? Math.round((kpis.totalPublished / kpis.totalUploaded) * 100)
@@ -55,7 +57,8 @@ export default function FunnelKPIs({ kpis }: FunnelKPIsProps) {
       {items.map((item) => (
         <div
           key={item.label}
-          className={`rounded-xl border p-4 transition-shadow hover:shadow-md ${item.color} relative`}
+          className={`rounded-xl border p-4 transition-shadow hover:shadow-md ${item.color} relative cursor-pointer`}
+          onClick={() => setSelectedMetric((prev) => (prev === item.label ? null : item.label))}
         >
           <div className="flex items-center justify-between">
             <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
@@ -76,6 +79,12 @@ export default function FunnelKPIs({ kpis }: FunnelKPIsProps) {
               </span>
             )}
           </div>
+          {selectedMetric === item.label && (
+            <div className="mt-2 rounded-lg border border-gray-200 bg-white/80 p-2 text-[11px] text-gray-700">
+              <p className="font-semibold">{item.label} drilldown</p>
+              <p className="mt-0.5 text-gray-600">{item.definition}</p>
+            </div>
+          )}
         </div>
       ))}
     </div>

@@ -105,6 +105,7 @@ function EfficiencyTooltip({ active, payload }: any) {
 
 export function EfficiencyMatrix({ data }: { data: EfficiencyPoint[] }) {
   const [selectedClient, setSelectedClient] = useState<string>("all");
+  const [selectedPoint, setSelectedPoint] = useState<EfficiencyPoint | null>(null);
 
   const clientIds = Array.from(
     new Set(data.map((d) => d.client_id).filter((id): id is string => !!id))
@@ -125,14 +126,14 @@ export function EfficiencyMatrix({ data }: { data: EfficiencyPoint[] }) {
   return (
     <div className="flex h-full flex-col rounded-xl border border-red-100 bg-white/70 p-4 shadow-sm shadow-red-50">
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
           <div>
             <h3 className="text-sm font-semibold text-zinc-900">Efficiency Matrix</h3>
             <p className="text-xs text-zinc-500">
               Created vs Published per channel — {filtered.length} channel{filtered.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-1">
             <DefinitionButton definition="Scatter plot of created count (x) vs published count (y) per channel. Higher publish rate = better efficiency. Filter by client." />
             <InsightButton page="page3" widget="efficiency_matrix" title="Efficiency Matrix insight" />
           </div>
@@ -176,7 +177,14 @@ export function EfficiencyMatrix({ data }: { data: EfficiencyPoint[] }) {
       </div>
       <div className="min-h-0 flex-1" style={{ minHeight: 240 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
+          <ScatterChart
+            margin={{ top: 10, right: 20, bottom: 20, left: 10 }}
+            onClick={(state) => {
+              const payload = (state as unknown as { activePayload?: Array<{ payload?: EfficiencyPoint }> })?.activePayload;
+              const p = payload?.[0]?.payload;
+              if (p) setSelectedPoint(p);
+            }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#fee2e2" />
             <XAxis
               dataKey="created_count"
@@ -213,6 +221,25 @@ export function EfficiencyMatrix({ data }: { data: EfficiencyPoint[] }) {
           </ScatterChart>
         </ResponsiveContainer>
       </div>
+      {selectedPoint && (
+        <div className="mt-2 rounded-lg border border-zinc-200 bg-white p-2.5 text-xs text-zinc-700">
+          <div className="mb-1 flex items-center justify-between">
+            <p className="font-semibold text-zinc-900">Selected Point</p>
+            <button
+              type="button"
+              onClick={() => setSelectedPoint(null)}
+              className="rounded border border-zinc-200 px-2 py-0.5 text-[10px] font-semibold text-zinc-500 hover:border-zinc-300 hover:text-zinc-700"
+            >
+              Close
+            </button>
+          </div>
+          <p>
+            {selectedPoint.client_id} / {selectedPoint.channel_name}: created{" "}
+            {selectedPoint.created_count.toLocaleString()}, published{" "}
+            {selectedPoint.published_count.toLocaleString()} ({selectedPoint.publish_rate}%)
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -467,7 +494,7 @@ export function SankeyFlow({ nodes, links, clientIds: propClientIds }: SankeyPro
       {/* Header */}
       <div className="shrink-0 border-b border-red-100/60">
         <div className="flex items-center justify-between px-5 py-2.5">
-          <div className="flex items-start gap-2">
+          <div className="flex min-w-0 flex-1 items-start gap-2">
             <div>
               <h3 className="text-sm font-semibold text-zinc-900">Content Flow Network</h3>
               <p className="text-xs text-zinc-500">
@@ -476,7 +503,7 @@ export function SankeyFlow({ nodes, links, clientIds: propClientIds }: SankeyPro
                   : "Select any node to explore its connections"}
               </p>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="ml-auto flex items-center gap-1">
               <DefinitionButton definition="Sankey-style flow: Input types → Channels → Output types. Click a node to see incoming/outgoing connections. Filter by client." />
               <InsightButton page="page3" widget="content_flow_network" title="Content Flow Network insight" />
             </div>
@@ -836,14 +863,14 @@ export function ClientUserDrilldown({
     <div className="flex h-full flex-col rounded-xl border border-red-100 bg-white/70 shadow-sm shadow-red-50">
       {/* Header */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-red-100/60 px-4 py-3">
-        <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
           <div>
             <h3 className="text-sm font-semibold text-zinc-900">Client & User Performance</h3>
             <p className="text-xs text-zinc-500">
               Ranked by published count — click a client to drill into its users
             </p>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-1">
             <DefinitionButton definition="Client ranking by published count with publish rate. Expand a client to see its users. Filter: All, Top 10, or Bottom 10." />
             <InsightButton page="page3" widget="client_user_drilldown" title="Client User Drilldown insight" />
           </div>
@@ -927,6 +954,7 @@ export function PlatformStackedChart({
   data: Record<string, string | number>[];
   outputTypes: string[];
 }) {
+  const [selectedSegment, setSelectedSegment] = useState<{ platform: string; outputType: string; value: number } | null>(null);
   if (data.length === 0) {
     return (
       <div className="flex h-full items-center justify-center rounded-xl border border-red-100 bg-white/70 p-4">
@@ -980,11 +1008,34 @@ export function PlatformStackedChart({
                 stackId="stack"
                 fill={PALETTE[i % PALETTE.length]}
                 name={ot}
+                onClick={(entry) => {
+                  const row = entry as unknown as Record<string, unknown>;
+                  const platform = String(row.platform ?? "");
+                  const value = Number(row[ot] ?? 0);
+                  setSelectedSegment({ platform, outputType: ot, value });
+                }}
               />
             ))}
           </BarChart>
         </ResponsiveContainer>
       </div>
+      {selectedSegment && (
+        <div className="mt-2 rounded-lg border border-zinc-200 bg-white p-2.5 text-xs text-zinc-700">
+          <div className="mb-1 flex items-center justify-between">
+            <p className="font-semibold text-zinc-900">Selected Segment</p>
+            <button
+              type="button"
+              onClick={() => setSelectedSegment(null)}
+              className="rounded border border-zinc-200 px-2 py-0.5 text-[10px] font-semibold text-zinc-500 hover:border-zinc-300 hover:text-zinc-700"
+            >
+              Close
+            </button>
+          </div>
+          <p>
+            {selectedSegment.platform} / {selectedSegment.outputType}: {selectedSegment.value.toFixed(1)}%
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -1009,6 +1060,7 @@ function VelocityTooltip({ active, payload }: any) {
 }
 
 export function VelocityChart({ data }: { data: VelocityRow[] }) {
+  const [selectedGroup, setSelectedGroup] = useState<VelocityRow | null>(null);
   if (data.length === 0) {
     return (
       <div className="flex h-full items-center justify-center rounded-xl border border-red-100 bg-white/70 p-4">
@@ -1039,7 +1091,16 @@ export function VelocityChart({ data }: { data: VelocityRow[] }) {
       </div>
       <div className="min-h-0 flex-1" style={{ minHeight: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 20, bottom: 5, left: 5 }}>
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 5, right: 20, bottom: 5, left: 5 }}
+            onClick={(state) => {
+              const payload = (state as unknown as { activePayload?: Array<{ payload?: VelocityRow }> })?.activePayload;
+              const row = payload?.[0]?.payload;
+              if (row) setSelectedGroup(row);
+            }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#fee2e2" horizontal={false} />
             <XAxis
               type="number"
@@ -1059,6 +1120,23 @@ export function VelocityChart({ data }: { data: VelocityRow[] }) {
         </span>
         <span>Hover for full distribution</span>
       </div>
+      {selectedGroup && (
+        <div className="mt-2 rounded-lg border border-zinc-200 bg-white p-2.5 text-xs text-zinc-700">
+          <div className="mb-1 flex items-center justify-between">
+            <p className="font-semibold text-zinc-900">{selectedGroup.group_name} details</p>
+            <button
+              type="button"
+              onClick={() => setSelectedGroup(null)}
+              className="rounded border border-zinc-200 px-2 py-0.5 text-[10px] font-semibold text-zinc-500 hover:border-zinc-300 hover:text-zinc-700"
+            >
+              Close
+            </button>
+          </div>
+          <p>
+            Min {selectedGroup.min_hours}h, Q1 {selectedGroup.q1_hours}h, median {selectedGroup.median_hours}h, Q3 {selectedGroup.q3_hours}h, max {selectedGroup.max_hours}h.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
