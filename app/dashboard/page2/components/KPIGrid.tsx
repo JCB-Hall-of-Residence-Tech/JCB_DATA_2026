@@ -16,13 +16,13 @@ interface KPITile {
 
 export default function KPIGrid({ kpis }: KPIGridProps) {
   const tiles: KPITile[] = [
-    {
-      label: "Publish Rate",
-      value: String(kpis.publishRate),
-      unit: "%",
-      direction: kpis.publishRate >= 50 ? "up" : "down",
-      sub: "Processed → Published",
-    },
+    // {
+    //   label: "Publish Rate",
+    //   value: String(kpis.publishRate),
+    //   unit: "%",
+    //   direction: kpis.publishRate >= 50 ? "up" : "down",
+    //   sub: "Processed → Published",
+    // },
     {
       label: "Process Rate",
       value: String(kpis.processRate),
@@ -37,13 +37,13 @@ export default function KPIGrid({ kpis }: KPIGridProps) {
       direction: "up",
       sub: "Per published video",
     },
-    {
-      label: "Drop Gap",
-      value: kpis.dropGap.toLocaleString(),
-      unit: "",
-      direction: "down",
-      sub: "Proc − Published count",
-    },
+    // {
+    //   label: "Drop Gap",
+    //   value: kpis.dropGap.toLocaleString(),
+    //   unit: "",
+    //   direction: "down",
+    //   sub: "Proc − Published count",
+    // },
     {
       label: "Total Uploaded",
       value: kpis.totalUploaded.toLocaleString(),

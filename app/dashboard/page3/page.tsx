@@ -3,25 +3,28 @@
 import { useEffect, useState } from "react";
 import {
   EfficiencyMatrix,
-  SankeyFlow,
   ClientUserDrilldown,
-  PlatformStackedChart,
-  VelocityChart,
   type EfficiencyPoint,
-  type SankeyNode,
-  type SankeyLink,
   type ClientRank,
   type UserByClient,
-  type VelocityRow,
 } from "@/components/page3-charts";
+import {
+  MonthlyContributionChart,
+  ClientMomentumTracker,
+  ClientShareDonut,
+  LanguageHeatmap,
+  type ClientShare,
+  type LanguageMatrix,
+} from "@/components/page4-charts";
 
 type Page3Data = {
   efficiency: EfficiencyPoint[];
-  sankey: { nodes: SankeyNode[]; links: SankeyLink[]; clientIds: string[] };
   clientRanking: ClientRank[];
   usersByClient: UserByClient[];
-  stacked: { data: Record<string, string | number>[]; outputTypes: string[] };
-  velocity: VelocityRow[];
+  monthlyContribution: Record<string, string | number>[];
+  clientIds: string[];
+  clientShare: ClientShare[];
+  languageMatrix: LanguageMatrix;
 };
 
 export default function Page3() {
@@ -82,7 +85,7 @@ export default function Page3() {
           </p>
         </header>
 
-        {/* Top row: Efficiency Matrix (left) + Client & User Performance (right) */}
+        {/* Row 1: Efficiency Matrix (left) + Client & User Performance (right) */}
         <div className="grid gap-4 lg:grid-cols-2">
           <div style={{ height: 420 }}>
             <EfficiencyMatrix data={data.efficiency} />
@@ -92,22 +95,21 @@ export default function Page3() {
           </div>
         </div>
 
-        {/* Middle row: Content Flow Network (full width) */}
-        <div style={{ height: 400 }}>
-          <SankeyFlow nodes={data.sankey.nodes} links={data.sankey.links} clientIds={data.sankey.clientIds} />
+        {/* Row 2: Monthly Billing | Growth Momentum | Client Share */}
+        <div className="grid grid-cols-1 lg:grid-cols-[5fr_2fr_3fr] gap-4" style={{ minHeight: 340 }}>
+          <MonthlyContributionChart data={data.monthlyContribution} clientIds={data.clientIds} />
+          <ClientMomentumTracker data={data.monthlyContribution} clientIds={data.clientIds} />
+          <ClientShareDonut
+            data={data.clientShare}
+            languageMatrix={data.languageMatrix}
+            monthlyContribution={data.monthlyContribution}
+            clientIds={data.clientIds}
+          />
         </div>
 
-        {/* Bottom row: Platform Stacked + Velocity */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div style={{ height: 380 }}>
-            <PlatformStackedChart
-              data={data.stacked.data}
-              outputTypes={data.stacked.outputTypes}
-            />
-          </div>
-          <div style={{ height: 380 }}>
-            <VelocityChart data={data.velocity} />
-          </div>
+        {/* Row 3: Language Coverage by Client */}
+        <div style={{ minHeight: 340 }}>
+          <LanguageHeatmap matrix={data.languageMatrix} />
         </div>
       </div>
     </div>

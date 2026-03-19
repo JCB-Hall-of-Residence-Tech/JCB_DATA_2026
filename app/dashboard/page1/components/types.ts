@@ -85,6 +85,12 @@ export interface TopFormatsRow {
   [outputType: string]: string | number;
 }
 
+export interface FeatureMatrix {
+  clients: string[];
+  outputTypes: string[];
+  data: Record<string, Record<string, { created: number; published: number }>>;
+}
+
 export interface Page1Data {
   kpis: Page1KPIs;
   lifecycleTrend: LifecycleTrendData;
@@ -92,5 +98,6 @@ export interface Page1Data {
   efficiencyMatrix: EfficiencyPoint[];
   topFormatsOverTime: TopFormatsRow[];
   topFormatsOutputTypes: string[];
+  featureMatrix: FeatureMatrix;
   dataHealthAlerts: DataHealthAlert[];
 }

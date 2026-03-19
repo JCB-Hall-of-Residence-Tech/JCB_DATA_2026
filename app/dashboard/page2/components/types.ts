@@ -17,6 +17,14 @@ export interface TrendItem {
   published: number;
 }
 
+export interface MonthlyByClientItem {
+  client_id: string;
+  month: string;
+  uploaded: number;
+  processed: number;
+  published: number;
+}
+
 export interface KPIs {
   totalUploaded: number;
   totalProcessed: number;
@@ -27,11 +35,25 @@ export interface KPIs {
   dropGap: number;
 }
 
+export interface RiskRow {
+  client_id: string;
+  totalVideos: number;
+  unknownInput: number;
+  pubNoPlatform: number;
+  pubNoUrl: number;
+  totalCreated: number;
+  totalPublished: number;
+  outputTypesUsed: number;
+  totalOutputTypes: number;
+  createdHours: number;
+}
+
 export interface Page2Data {
   filters: {
     clients: string[];
   };
   kpis: KPIs;
+  riskTable: RiskRow[];
   breakdowns: {
     channel: BreakdownItem[];
     client: BreakdownItem[];
@@ -41,6 +63,7 @@ export interface Page2Data {
     language: BreakdownItem[];
   };
   trend: TrendItem[];
+  monthlyByClient: MonthlyByClientItem[];
 }
 
 export type DimensionKey =

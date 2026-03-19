@@ -5,11 +5,31 @@ import { DefinitionButton } from "@/components/ui/DefinitionButton";
 import { Line } from "react-chartjs-2";
 import type { ChartOptions } from "chart.js";
 import { CHART_FONT } from "./ChartSetup";
-import type { TrendItem } from "./types";
-import { useState } from "react";
+import type { TrendItem, MonthlyByClientItem } from "./types";
+import { useState, useMemo } from "react";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface TrendChartProps {
   data: TrendItem[];
+  monthlyByClient: MonthlyByClientItem[];
+}
+
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function formatMonth(ym: string): string {
+  const [y, m] = String(ym).split("-");
+  const idx = parseInt(m || "1", 10) - 1;
+  return `${MONTH_NAMES[idx] ?? m}, ${y ?? ""}`;
 }
 
 const lineConfigs = [
@@ -18,12 +38,20 @@ const lineConfigs = [
   { label: "Published", key: "published" as const, color: "#10b981" },
 ];
 
-export default function TrendChart({ data }: TrendChartProps) {
+export default function TrendChart({ data, monthlyByClient }: TrendChartProps) {
   const [visibleLines, setVisibleLines] = useState(
     () => new Array(lineConfigs.length).fill(true) as boolean[]
   );
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   const labels = data.map((d) => d.month);
+
+  const drillDownRows = useMemo(() => {
+    if (!selectedMonth) return [];
+    return monthlyByClient
+      .filter((r) => r.month === selectedMonth)
+      .sort((a, b) => b.processed - a.processed);
+  }, [selectedMonth, monthlyByClient]);
 
   const datasets = lineConfigs.map((cfg, i) => ({
     label: cfg.label,
@@ -45,6 +73,13 @@ export default function TrendChart({ data }: TrendChartProps) {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
+    onClick: (_event, elements) => {
+      if (elements.length > 0) {
+        const idx = elements[0].index;
+        const month = data[idx]?.month ?? null;
+        setSelectedMonth((prev) => (prev === month ? null : month));
+      }
+    },
     scales: {
       x: {
         grid: { display: false },
@@ -71,6 +106,10 @@ export default function TrendChart({ data }: TrendChartProps) {
       },
     },
     animation: { duration: 350 },
+    onHover: (event, elements) => {
+      const el = event.native?.target as HTMLElement | undefined;
+      if (el) el.style.cursor = elements.length > 0 ? "pointer" : "default";
+    },
   };
 
   function toggleLine(idx: number) {
@@ -87,7 +126,7 @@ export default function TrendChart({ data }: TrendChartProps) {
         <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
           Uploaded vs Processed vs Published Over Time
         </h4>
-        <DefinitionButton definition="Monthly trend of uploaded, processed (created), and published counts. Toggle lines to compare." />
+        <DefinitionButton definition="Monthly trend of uploaded, processed (created), and published counts. Click any month or data point to drill down into client-wise breakdown for that month." />
       </div>
       <div className="flex gap-2 mb-3 flex-wrap">
         {lineConfigs.map((cfg, i) => (
@@ -113,9 +152,69 @@ export default function TrendChart({ data }: TrendChartProps) {
           </label>
         ))}
       </div>
+      <p className="text-[10px] text-gray-400 mb-2">
+        Click a month or data point to see client-wise breakdown
+      </p>
       <div className="h-[170px] sm:h-[200px]">
         <Line data={{ labels, datasets }} options={options} />
       </div>
+
+      {selectedMonth && (
+        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h5 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              {formatMonth(selectedMonth)} — Client Breakdown
+            </h5>
+            <button
+              type="button"
+              onClick={() => setSelectedMonth(null)}
+              className="text-[10px] font-semibold text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-200 hover:border-gray-300"
+            >
+              Close
+            </button>
+          </div>
+          {drillDownRows.length === 0 ? (
+            <p className="text-xs text-gray-400 py-4">No client data for this month.</p>
+          ) : (
+          <>
+          <div className="h-[180px]">
+            <Bar
+              data={{
+                labels: drillDownRows.map((r) => r.client_id),
+                datasets: [
+                  { label: "Uploaded", data: drillDownRows.map((r) => r.uploaded), backgroundColor: "#e9434a", borderRadius: 4 },
+                  { label: "Processed", data: drillDownRows.map((r) => r.processed), backgroundColor: "#f59e0b", borderRadius: 4 },
+                  { label: "Published", data: drillDownRows.map((r) => r.published), backgroundColor: "#10b981", borderRadius: 4 },
+                ],
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: "top" as const } },
+                scales: {
+                  x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                  y: { grid: { color: "#f1f5f9" }, ticks: { font: { size: 10 } } },
+                },
+              }}
+            />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
+            {drillDownRows.map((r) => (
+              <div
+                key={r.client_id}
+                className="px-2.5 py-1 rounded-md bg-gray-50 border border-gray-100"
+              >
+                <span className="font-semibold text-gray-700">{r.client_id}</span>
+                <span className="text-gray-400 ml-1.5">
+                  ↑{r.uploaded.toLocaleString()} · P{r.processed.toLocaleString()} · Pub{r.published.toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+          </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

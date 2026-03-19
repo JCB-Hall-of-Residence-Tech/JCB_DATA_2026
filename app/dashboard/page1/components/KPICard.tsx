@@ -77,10 +77,10 @@ export default function KPICard({
       <button
         type="button"
         onClick={() => setShowDefinition((v) => !v)}
-        className="w-full rounded-lg border border-gray-200 p-3 text-left transition-all hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:ring-offset-1"
+        className="w-full rounded-lg border border-gray-200 p-2.5 text-left transition-all hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:ring-offset-1"
       >
         <div className="flex items-start justify-between gap-2">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 min-w-0">
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-gray-400 min-w-0">
             {label}
           </div>
           <span
@@ -91,7 +91,7 @@ export default function KPICard({
             ?
           </span>
         </div>
-        <div className="text-xl font-bold text-gray-900 mt-1">{value}</div>
+        <div className="text-lg font-bold text-gray-900 mt-1">{value}</div>
         {allTimeValue && (
           <div className="text-[10px] text-gray-400 mt-0.5">
             All-time: <span className="font-medium text-gray-500">{allTimeValue}</span>
@@ -101,17 +101,17 @@ export default function KPICard({
         {(currentMonthValue || prevValue || hasTrend) && (
           <div className="mt-2 flex flex-col gap-0.5 border-t border-gray-100 pt-2">
             {currentMonthValue != null && !allTimeValue && (
-              <div className="text-[11px] text-gray-500">
+            <div className="text-[10px] text-gray-500">
                 {currentMonthLabel ?? "This month"}: <span className="font-medium text-gray-600">{currentMonthValue}</span>
               </div>
             )}
             {prevValue != null && (
-              <div className="text-[11px] text-gray-500">
+              <div className="text-[10px] text-gray-500">
                 {prevLabel}: <span className="font-medium text-gray-600">{prevValue}</span>
               </div>
             )}
             {hasTrend && (
-              <div className="text-[11px]">
+              <div className="text-[10px]">
                 {trendDisplay}
                 <span className="text-gray-400 ml-1">vs {prevLabel}</span>
               </div>

@@ -166,12 +166,40 @@ export function ClientMomentumTracker({ data, clientIds }: { data: Record<string
 }
 
 /* ================================================================
-   4. CLIENT PROCESSING SHARE (Donut)
+   4. CLIENT PROCESSING SHARE (Donut) — with in-place drill-down
    ================================================================ */
 
-export function ClientShareDonut({ data }: { data: ClientShare[] }) {
+export function ClientShareDonut({
+  data,
+  languageMatrix,
+  monthlyContribution,
+  clientIds,
+}: {
+  data: ClientShare[];
+  languageMatrix?: LanguageMatrix;
+  monthlyContribution?: Record<string, string | number>[];
+  clientIds?: string[];
+}) {
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const total = data.reduce((s, d) => s + d.createdHours, 0);
   const pieData = data.map((d) => ({ name: d.client_id, value: d.createdHours, pct: total === 0 ? 0 : Math.round((d.createdHours / total) * 1000) / 10 }));
+
+  const selectedRow = data.find((d) => d.client_id === selectedClient);
+  const langRows = useMemo(() => {
+    if (!selectedClient || !languageMatrix?.data[selectedClient]) return [];
+    const cells = languageMatrix.data[selectedClient];
+    return Object.entries(cells).map(([lang, c]) => ({
+      language: lang,
+      uploadedHours: Number(c.uploadedHours ?? 0),
+      processingHours: Number(c.processingHours ?? 0),
+      publishedHours: Number(c.publishedHours ?? 0),
+    })).filter((r) => r.processingHours > 0 || r.uploadedHours > 0 || r.publishedHours > 0).sort((a, b) => b.processingHours - a.processingHours);
+  }, [selectedClient, languageMatrix]);
+  const monthlySeries = useMemo(() => {
+    if (!selectedClient || !monthlyContribution?.length) return [];
+    return monthlyContribution.map((m) => ({ month: String(m.month), value: Number(m[selectedClient] ?? 0) }));
+  }, [selectedClient, monthlyContribution]);
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
       <div className="shrink-0 px-4 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-start justify-between gap-2">
@@ -179,19 +207,93 @@ export function ClientShareDonut({ data }: { data: ClientShare[] }) {
           <h3 className="text-sm font-bold text-gray-900">Client Processing Share</h3>
           <p className="text-[10px] text-gray-400 mt-0.5">Who drives capacity usage?</p>
         </div>
-        <DefinitionButton definition="Donut chart showing each client's share of total processed hours. Identifies which accounts drive the most capacity usage." />
+        <div className="flex items-center gap-1">
+          {selectedClient && (
+            <button
+              type="button"
+              onClick={() => setSelectedClient(null)}
+              className="text-[10px] font-semibold text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-200 hover:border-gray-300 transition-colors"
+            >
+              ← Back
+            </button>
+          )}
+          <DefinitionButton definition="Donut chart showing each client's share of total processed hours. Click a segment to drill down into that client. Identifies which accounts drive the most capacity usage." />
+        </div>
       </div>
-      <div className="flex-1 p-2 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={pieData} cx="50%" cy="50%" innerRadius="50%" outerRadius="78%" paddingAngle={2} dataKey="value" nameKey="name">
-              {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="white" strokeWidth={2} />)}
-            </Pie>
-            <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }}
-              formatter={(v, name) => [`${Number(v).toFixed(0)}h (${pieData.find((p) => p.name === String(name))?.pct ?? 0}%)`, String(name)]} />
-            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-          </PieChart>
-        </ResponsiveContainer>
+      <div className="flex-1 p-2 min-h-0 overflow-auto">
+        {selectedClient && selectedRow ? (
+          <div className="h-full flex flex-col gap-3">
+            <div className="shrink-0 flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full shrink-0" style={{ background: getClientColor(selectedClient, data.findIndex((d) => d.client_id === selectedClient)) }} />
+              <span className="text-sm font-bold text-gray-900">{selectedClient}</span>
+            </div>
+            <div className="shrink-0 grid grid-cols-3 gap-2">
+              <div className="rounded-lg border border-gray-100 bg-gray-50/50 px-2 py-1.5 text-center">
+                <p className="text-[9px] font-bold text-gray-400 uppercase">Uploaded</p>
+                <p className="text-sm font-black text-gray-800">{selectedRow.uploadedHours.toFixed(0)}h</p>
+              </div>
+              <div className="rounded-lg border border-gray-100 bg-red-50/50 px-2 py-1.5 text-center">
+                <p className="text-[9px] font-bold text-gray-400 uppercase">Processed</p>
+                <p className="text-sm font-black text-red-600">{selectedRow.createdHours.toFixed(0)}h</p>
+              </div>
+              <div className="rounded-lg border border-gray-100 bg-emerald-50/50 px-2 py-1.5 text-center">
+                <p className="text-[9px] font-bold text-gray-400 uppercase">Published</p>
+                <p className="text-sm font-black text-emerald-600">{selectedRow.publishedHours.toFixed(0)}h</p>
+              </div>
+            </div>
+            {monthlySeries.length > 0 && (
+              <div className="flex-1 min-h-[80px]">
+                <p className="text-[10px] font-bold text-gray-400 mb-1">Monthly trend</p>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlySeries} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
+                    <Area type="monotone" dataKey="value" stroke={getClientColor(selectedClient, 0)} fill={getClientColor(selectedClient, 0)} fillOpacity={0.2} strokeWidth={1.5} dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {langRows.length > 0 && (
+              <div className="shrink-0">
+                <p className="text-[10px] font-bold text-gray-400 mb-1">By language</p>
+                <div className="flex flex-wrap gap-1">
+                  {langRows.slice(0, 8).map((r) => (
+                    <div key={r.language} className="px-2 py-1 rounded-md bg-gray-50 border border-gray-100 text-[10px]">
+                      <span className="font-semibold text-gray-700">{r.language}</span>
+                      <span className="text-gray-400 ml-1">{r.processingHours.toFixed(0)}h</span>
+                    </div>
+                  ))}
+                  {langRows.length > 8 && <span className="text-[10px] text-gray-400">+{langRows.length - 8} more</span>}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="50%"
+                innerRadius="50%"
+                outerRadius="78%"
+                paddingAngle={2}
+                dataKey="value"
+                nameKey="name"
+                onClick={(data) => {
+                  const name = (data as { name?: string })?.name;
+                  if (name) setSelectedClient((prev) => (prev === name ? null : String(name)));
+                }}
+                style={{ cursor: "pointer" }}
+              >
+                {pieData.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="white" strokeWidth={2} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                formatter={(v, name) => [`${Number(v).toFixed(0)}h (${pieData.find((p) => p.name === String(name))?.pct ?? 0}%)`, String(name)]} />
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
@@ -201,10 +303,28 @@ export function ClientShareDonut({ data }: { data: ClientShare[] }) {
    5. CONTENT AMPLIFICATION FACTOR (unique — how much content each upload generates)
    ================================================================ */
 
-export function AmplificationChart({ data }: { data: AmplificationRow[] }) {
+export function AmplificationChart({
+  data,
+  featureMatrix,
+}: {
+  data: AmplificationRow[];
+  featureMatrix?: FeatureMatrix;
+}) {
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const chartData = data.map((d) => ({
     name: d.client_id, uploaded: d.uploaded, created: d.created, published: d.published, factor: d.amplification,
   }));
+
+  const selectedRow = data.find((d) => d.client_id === selectedClient);
+  const outputTypeRows = useMemo(() => {
+    if (!selectedClient || !featureMatrix?.data[selectedClient]) return [];
+    const cells = featureMatrix.data[selectedClient];
+    return Object.entries(cells)
+      .map(([ot, c]) => ({ outputType: ot, created: c.created, published: c.published }))
+      .filter((r) => r.created > 0 || r.published > 0)
+      .sort((a, b) => b.created - a.created);
+  }, [selectedClient, featureMatrix]);
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
       <div className="shrink-0 px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-start justify-between gap-2">
@@ -212,32 +332,89 @@ export function AmplificationChart({ data }: { data: AmplificationRow[] }) {
           <h3 className="text-sm font-bold text-gray-900">Content Amplification Factor</h3>
           <p className="text-[11px] text-gray-400 mt-0.5">For every 1 upload, how many outputs are generated?</p>
         </div>
-        <DefinitionButton definition="Processed count ÷ uploaded count per client. Shows how much content each upload generates (e.g. 5× means 1 upload yields 5 outputs)." />
+        <div className="flex items-center gap-1">
+          {selectedClient && (
+            <button
+              type="button"
+              onClick={() => setSelectedClient(null)}
+              className="text-[10px] font-semibold text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-200 hover:border-gray-300 transition-colors"
+            >
+              ← Back
+            </button>
+          )}
+          <DefinitionButton definition="Processed count ÷ uploaded count per client. Click a client to drill down. Shows how much content each upload generates (e.g. 5× means 1 upload yields 5 outputs)." />
+        </div>
       </div>
-      <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
-        <div className="flex-1 min-h-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={50} />
-              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }} />
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="uploaded" name="Uploaded" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={32} />
-              <Bar dataKey="created" name="Processed" fill="#e9434a" radius={[4, 4, 0, 0]} maxBarSize={32} fillOpacity={0.7} />
-              <Bar dataKey="published" name="Published" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={32} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="shrink-0 flex flex-wrap gap-1.5">
-          {chartData.map((d, i) => (
-            <div key={d.name} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100">
-              <div className="w-2 h-2 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-              <span className="text-[10px] font-semibold text-gray-700">{d.name}</span>
-              <span className="text-xs font-black text-gray-900">{d.factor}×</span>
+      <div className="flex-1 min-h-0 p-3 flex flex-col gap-2 overflow-auto">
+        {selectedClient && selectedRow ? (
+          <div className="flex flex-col gap-3">
+            <div className="shrink-0 flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-900">{selectedClient}</span>
+              <span className="text-xs font-black text-red-600">{selectedRow.amplification}×</span>
             </div>
-          ))}
-        </div>
+            <div className="shrink-0 grid grid-cols-3 gap-2">
+              <div className="rounded-lg border border-gray-100 bg-gray-50/50 px-2 py-1.5 text-center">
+                <p className="text-[9px] font-bold text-gray-400 uppercase">Uploaded</p>
+                <p className="text-sm font-black text-gray-800">{selectedRow.uploaded.toLocaleString()}</p>
+              </div>
+              <div className="rounded-lg border border-gray-100 bg-red-50/50 px-2 py-1.5 text-center">
+                <p className="text-[9px] font-bold text-gray-400 uppercase">Processed</p>
+                <p className="text-sm font-black text-red-600">{selectedRow.created.toLocaleString()}</p>
+              </div>
+              <div className="rounded-lg border border-gray-100 bg-emerald-50/50 px-2 py-1.5 text-center">
+                <p className="text-[9px] font-bold text-gray-400 uppercase">Published</p>
+                <p className="text-sm font-black text-emerald-600">{selectedRow.published.toLocaleString()}</p>
+              </div>
+            </div>
+            {outputTypeRows.length > 0 && (
+              <div className="shrink-0">
+                <p className="text-[10px] font-bold text-gray-400 mb-1">By output type</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {outputTypeRows.map((r) => (
+                    <div key={r.outputType} className="px-2 py-1 rounded-md bg-gray-50 border border-gray-100 text-[10px]">
+                      <span className="font-semibold text-gray-700">{r.outputType}</span>
+                      <span className="text-gray-400 ml-1">P:{r.published.toLocaleString()} · C:{r.created.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={50} />
+                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }} />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="uploaded" name="Uploaded" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={32}
+                    onClick={(data) => { const name = (data as { name?: string })?.name; if (name) setSelectedClient((p) => (p === name ? null : name)); }} cursor="pointer" />
+                  <Bar dataKey="created" name="Processed" fill="#e9434a" radius={[4, 4, 0, 0]} maxBarSize={32} fillOpacity={0.7}
+                    onClick={(data) => { const name = (data as { name?: string })?.name; if (name) setSelectedClient((p) => (p === name ? null : name)); }} cursor="pointer" />
+                  <Bar dataKey="published" name="Published" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={32}
+                    onClick={(data) => { const name = (data as { name?: string })?.name; if (name) setSelectedClient((p) => (p === name ? null : name)); }} cursor="pointer" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="shrink-0 flex flex-wrap gap-1.5">
+              {chartData.map((d, i) => (
+                <button
+                  key={d.name}
+                  type="button"
+                  onClick={() => setSelectedClient((p) => (p === d.name ? null : d.name))}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-100 hover:border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  <div className="w-2 h-2 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                  <span className="text-[10px] font-semibold text-gray-700">{d.name}</span>
+                  <span className="text-xs font-black text-gray-900">{d.factor}×</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -247,7 +424,31 @@ export function AmplificationChart({ data }: { data: AmplificationRow[] }) {
    6. PUBLISHED HOURS BY PLATFORM (unique — from channel_wise_publishing_duration)
    ================================================================ */
 
-export function PlatformHoursChart({ data }: { data: PlatformHoursRow[] }) {
+export type PlatformHoursByClientRow = { client_id: string; platform: string; hours: number };
+
+export function PlatformHoursChart({
+  data,
+  platformHoursByClient,
+}: {
+  data: PlatformHoursRow[];
+  platformHoursByClient?: PlatformHoursByClientRow[];
+}) {
+  const [showAllPlatforms, setShowAllPlatforms] = useState(false);
+
+  const platformGroups = useMemo(() => {
+    if (!platformHoursByClient) return [];
+    const byPlatform = new Map<string, { client_id: string; hours: number }[]>();
+    for (const r of platformHoursByClient) {
+      if (!byPlatform.has(r.platform)) byPlatform.set(r.platform, []);
+      byPlatform.get(r.platform)!.push({ client_id: r.client_id, hours: r.hours });
+    }
+    return data.map((p) => ({
+      platform: p.platform,
+      totalHours: p.hours,
+      clients: (byPlatform.get(p.platform) ?? []).sort((a, b) => b.hours - a.hours),
+    }));
+  }, [data, platformHoursByClient]);
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden h-full flex flex-col">
       <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-red-50/30 flex items-start justify-between gap-2">
@@ -255,21 +456,68 @@ export function PlatformHoursChart({ data }: { data: PlatformHoursRow[] }) {
           <h3 className="text-sm font-bold text-gray-900">Published Duration by Platform</h3>
           <p className="text-[11px] text-gray-400 mt-0.5">Total published hours reaching each platform</p>
         </div>
-        <DefinitionButton definition="Total hours of content published to each platform (YouTube, TikTok, etc.). Aggregated from channel_wise_publishing_duration." />
+        <div className="flex items-center gap-1">
+          {showAllPlatforms ? (
+            <button
+              type="button"
+              onClick={() => setShowAllPlatforms(false)}
+              className="text-[10px] font-semibold text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-200 hover:border-gray-300 transition-colors"
+            >
+              ← Back
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowAllPlatforms(true)}
+              className="text-[10px] font-semibold text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-200 hover:border-gray-300 transition-colors"
+            >
+              Show all platforms
+            </button>
+          )}
+          <DefinitionButton definition="Total hours of content published to each platform. Use 'Show all platforms' to see client breakdown for every platform. Aggregated from channel_wise_publishing_duration." />
+        </div>
       </div>
-      <div className="flex-1 min-h-0 p-4">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} layout="vertical" margin={{ top: 4, right: 30, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}h`} />
-            <YAxis type="category" dataKey="platform" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={80} />
-            <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }}
-              formatter={(v) => [`${Number(v).toFixed(1)}h`, "Published"]} />
-            <Bar dataKey="hours" radius={[0, 6, 6, 0]} maxBarSize={24}>
-              {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="flex-1 min-h-0 p-4 overflow-auto">
+        {showAllPlatforms ? (
+          <div className="space-y-4">
+            {platformGroups.map((g, idx) => (
+              <div key={g.platform} className="rounded-lg border border-gray-100 bg-gray-50/30 p-2.5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-gray-900">{g.platform}</span>
+                  <span className="text-[10px] font-bold text-emerald-600">{g.totalHours.toFixed(1)}h total</span>
+                </div>
+                {g.clients.length > 0 ? (
+                  <div className="space-y-1">
+                    {g.clients.map((r, i) => (
+                      <div key={`${g.platform}-${r.client_id}`} className="flex items-center justify-between py-1 px-2 rounded bg-white border border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                          <span className="text-[10px] font-semibold text-gray-700">{r.client_id}</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-900">{r.hours.toFixed(1)}h</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-400 py-1">No client data</p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} layout="vertical" margin={{ top: 4, right: 30, bottom: 4, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}h`} />
+              <YAxis type="category" dataKey="platform" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} width={80} />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                formatter={(v) => [`${Number(v).toFixed(1)}h`, "Published"]} />
+              <Bar dataKey="hours" radius={[0, 6, 6, 0]} maxBarSize={24}>
+                {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

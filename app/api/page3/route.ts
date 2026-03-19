@@ -6,11 +6,11 @@ export async function GET() {
 
     const [
       efficiencyRes,
-      sankeyRes,
       clientsRes,
       usersRes,
-      stackedRes,
-      velocityRes,
+      monthlyContribRes,
+      clientShareRes,
+      languageByClientRes,
     ] = await Promise.all([
       // 1. Efficiency Matrix – channel_processing_summary (include client_id for filtering)
       client.query<{
@@ -33,50 +33,7 @@ export async function GET() {
         ORDER BY created_count DESC
       `),
 
-      // 2. Sankey Flow – videos joined with channel_processing_summary (case-insensitive grouping)
-      client.query<{
-        client_id: string;
-        source: string;
-        target: string;
-        value: number;
-        language: string;
-      }>(`
-        SELECT v.client_id,
-               INITCAP(LOWER(TRIM(v.input_type_name))) AS source,
-               INITCAP(LOWER(TRIM(cs.channel_name))) AS target,
-               COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown') AS language,
-               COUNT(*)::int AS value
-        FROM videos v
-        JOIN channel_processing_summary cs ON cs.client_id = v.client_id AND cs.channel_id = v.channel_id
-        WHERE v.input_type_name IS NOT NULL
-          AND cs.channel_name IS NOT NULL
-        GROUP BY v.client_id,
-                 LOWER(TRIM(v.input_type_name)),
-                 LOWER(TRIM(cs.channel_name)),
-                 COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown')
-        HAVING COUNT(*) > 0
-
-        UNION ALL
-
-        SELECT v.client_id,
-               INITCAP(LOWER(TRIM(cs.channel_name))) AS source,
-               INITCAP(LOWER(TRIM(v.output_type_name))) AS target,
-               COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown') AS language,
-               COUNT(*)::int AS value
-        FROM videos v
-        JOIN channel_processing_summary cs ON cs.client_id = v.client_id AND cs.channel_id = v.channel_id
-        WHERE cs.channel_name IS NOT NULL
-          AND v.output_type_name IS NOT NULL
-        GROUP BY v.client_id,
-                 LOWER(TRIM(cs.channel_name)),
-                 LOWER(TRIM(v.output_type_name)),
-                 COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown')
-        HAVING COUNT(*) > 0
-
-        ORDER BY value DESC
-      `),
-
-      // 3a. Clients ranked by published count (from channel_processing_summary)
+      // 2. Clients ranked by published count (from channel_processing_summary)
       client.query<{
         client_id: string;
         published_count: number;
@@ -96,7 +53,7 @@ export async function GET() {
         ORDER BY published_count DESC
       `),
 
-      // 3b. All users with their client_id, ranked by published count
+      // 3. All users with their client_id, ranked by published count
       client.query<{
         client_id: string;
         user_name: string;
@@ -117,97 +74,112 @@ export async function GET() {
         ORDER BY published_count DESC
       `),
 
-      // 4. Platform × Output Type Stacked (case-insensitive grouping)
+      // 4. Monthly client contribution (stacked area)
       client.query<{
-        platform: string;
-        output_type: string;
-        cnt: number;
+        client_id: string;
+        month: string;
+        created_hours: number;
       }>(`
-        WITH all_output_types AS (
-          SELECT DISTINCT INITCAP(LOWER(TRIM(output_type_name))) AS output_type_name
-          FROM videos WHERE output_type_name IS NOT NULL
-        ),
-        all_platforms AS (
-          SELECT DISTINCT INITCAP(LOWER(TRIM(published_platform))) AS published_platform
-          FROM videos WHERE published_flag AND published_platform IS NOT NULL
-        ),
-        combos AS (
-          SELECT p.published_platform AS platform, o.output_type_name AS output_type
-          FROM all_platforms p CROSS JOIN all_output_types o
-        ),
-        counts AS (
-          SELECT
-            INITCAP(LOWER(TRIM(published_platform))) AS platform,
-            INITCAP(LOWER(TRIM(output_type_name))) AS output_type,
-            COUNT(*)::int AS cnt
-          FROM videos
-          WHERE published_flag AND published_platform IS NOT NULL AND output_type_name IS NOT NULL
-          GROUP BY LOWER(TRIM(published_platform)), LOWER(TRIM(output_type_name))
-        )
-        SELECT
-          c.platform,
-          c.output_type,
-          COALESCE(counts.cnt, 0)::int AS cnt
-        FROM combos c
-        LEFT JOIN counts ON c.platform = counts.platform AND c.output_type = counts.output_type
-        ORDER BY c.platform, c.output_type
+        SELECT client_id, month,
+          ROUND(CASE WHEN total_created_duration IS NOT NULL AND TRIM(COALESCE(total_created_duration::text, '')) != ''
+            THEN EXTRACT(EPOCH FROM (total_created_duration::text::interval)) ELSE 0 END / 3600, 1)::numeric AS created_hours
+        FROM monthly_duration_summary
+        ORDER BY month, client_id
       `),
 
-      // 5. Production Velocity – avg turnaround by platform (case-insensitive grouping)
+      // 5. Client share of billing hours
       client.query<{
-        group_name: string;
-        avg_hours: number;
-        min_hours: number;
-        max_hours: number;
-        median_hours: number;
-        q1_hours: number;
-        q3_hours: number;
+        client_id: string;
+        created_hours: number;
+        published_hours: number;
+        uploaded_hours: number;
       }>(`
-        SELECT
-          INITCAP(LOWER(TRIM(published_platform))) AS group_name,
-          ROUND(AVG(EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600)::numeric, 1) AS avg_hours,
-          ROUND(MIN(EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600)::numeric, 1) AS min_hours,
-          ROUND(MAX(EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600)::numeric, 1) AS max_hours,
-          ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (
-            ORDER BY EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600
-          )::numeric, 1) AS median_hours,
-          ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (
-            ORDER BY EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600
-          )::numeric, 1) AS q1_hours,
-          ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (
-            ORDER BY EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600
-          )::numeric, 1) AS q3_hours
-        FROM videos
-        WHERE published_flag
-          AND published_at IS NOT NULL
-          AND uploaded_at IS NOT NULL
-          AND published_platform IS NOT NULL
-        GROUP BY LOWER(TRIM(published_platform))
-        ORDER BY avg_hours DESC
+        SELECT client_id,
+          ROUND(SUM(CASE WHEN total_created_duration IS NOT NULL AND TRIM(COALESCE(total_created_duration::text, '')) != ''
+            THEN EXTRACT(EPOCH FROM (total_created_duration::text::interval)) ELSE 0 END) / 3600, 1)::numeric AS created_hours,
+          ROUND(SUM(CASE WHEN total_published_duration IS NOT NULL AND TRIM(COALESCE(total_published_duration::text, '')) != ''
+            THEN EXTRACT(EPOCH FROM (total_published_duration::text::interval)) ELSE 0 END) / 3600, 1)::numeric AS published_hours,
+          ROUND(SUM(CASE WHEN total_uploaded_duration IS NOT NULL AND TRIM(COALESCE(total_uploaded_duration::text, '')) != ''
+            THEN EXTRACT(EPOCH FROM (total_uploaded_duration::text::interval)) ELSE 0 END) / 3600, 1)::numeric AS uploaded_hours
+        FROM monthly_duration_summary
+        GROUP BY client_id ORDER BY created_hours DESC
+      `),
+
+      // 6. Language × Client (for LanguageHeatmap)
+      client.query<{
+        client_id: string;
+        language: string;
+        uploaded_hours: number;
+        created_hours: number;
+        published_hours: number;
+        uploaded_count: number;
+        created_count: number;
+        published_count: number;
+      }>(`
+        SELECT client_id, language,
+          ROUND(SUM(CASE WHEN uploaded_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(uploaded_duration_hh_mm_ss::text, '')) != ''
+            THEN EXTRACT(EPOCH FROM (uploaded_duration_hh_mm_ss::text::interval)) ELSE 0 END)/3600, 1)::numeric AS uploaded_hours,
+          ROUND(SUM(CASE WHEN created_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(created_duration_hh_mm_ss::text, '')) != ''
+            THEN EXTRACT(EPOCH FROM (created_duration_hh_mm_ss::text::interval)) ELSE 0 END)/3600, 1)::numeric AS created_hours,
+          ROUND(SUM(CASE WHEN published_duration_hh_mm_ss IS NOT NULL AND TRIM(COALESCE(published_duration_hh_mm_ss::text, '')) != ''
+            THEN EXTRACT(EPOCH FROM (published_duration_hh_mm_ss::text::interval)) ELSE 0 END)/3600, 1)::numeric AS published_hours,
+          SUM(uploaded_count)::int AS uploaded_count,
+          SUM(created_count)::int AS created_count,
+          SUM(published_count)::int AS published_count
+        FROM language_processing_summary
+        GROUP BY client_id, language ORDER BY client_id, created_hours DESC
       `),
     ]);
 
-    // Build Sankey nodes + links
-    const sankeyLinks = sankeyRes.rows;
-    const nodeSet = new Set<string>();
-    for (const link of sankeyLinks) {
-      nodeSet.add(link.source);
-      nodeSet.add(link.target);
+    // Build monthlyContribution + clientIds
+    const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const formatMonth = (ym: string) => {
+      const [y, m] = String(ym).split("-");
+      const idx = parseInt(m || "1", 10) - 1;
+      return `${MONTH_NAMES[idx] ?? m}, ${y ?? ""}`;
+    };
+    const monthMap = new Map<string, Record<string, number>>();
+    const clientIds = new Set<string>();
+    for (const r of monthlyContribRes.rows) {
+      clientIds.add(r.client_id);
+      if (!monthMap.has(r.month)) monthMap.set(r.month, {});
+      monthMap.get(r.month)![r.client_id] = Number(r.created_hours);
     }
-    const sankeyNodes = Array.from(nodeSet).map((name) => ({ name }));
+    const sortedMonths = [...monthMap.keys()].sort();
+    const monthlyContribution = sortedMonths.map((ym) => ({ month: formatMonth(ym), ...monthMap.get(ym)! }));
 
-    // Build stacked data: { platform, OutputType1: count, OutputType2: count, ... }
-    const platformMap = new Map<string, Record<string, number>>();
-    const outputTypes = new Set<string>();
-    for (const row of stackedRes.rows) {
-      outputTypes.add(row.output_type);
-      if (!platformMap.has(row.platform)) platformMap.set(row.platform, {});
-      platformMap.get(row.platform)![row.output_type] = Number(row.cnt);
+    // Build languageMatrix (LanguageHeatmap expects same shape as page4)
+    const languages = new Set<string>();
+    const langMatrix: Record<
+      string,
+      Record<
+        string,
+        {
+          uploadedHours: number;
+          processingHours: number;
+          publishedHours: number;
+          uploadedCount: number;
+          processingCount: number;
+          publishedCount: number;
+          hours: number;
+          published: number;
+        }
+      >
+    > = {};
+    for (const r of languageByClientRes.rows) {
+      languages.add(r.language);
+      if (!langMatrix[r.client_id]) langMatrix[r.client_id] = {};
+      langMatrix[r.client_id][r.language] = {
+        uploadedHours: Number(r.uploaded_hours),
+        processingHours: Number(r.created_hours),
+        publishedHours: Number(r.published_hours),
+        uploadedCount: Number(r.uploaded_count),
+        processingCount: Number(r.created_count),
+        publishedCount: Number(r.published_count),
+        hours: Number(r.created_hours),
+        published: Number(r.published_count),
+      };
     }
-    const stackedData = Array.from(platformMap.entries()).map(([platform, types]) => ({
-      platform,
-      ...types,
-    }));
 
     return Response.json({
       efficiency: efficiencyRes.rows.map((r) => ({
@@ -217,17 +189,6 @@ export async function GET() {
         published_count: Number(r.published_count),
         publish_rate: Number(r.publish_rate),
       })),
-      sankey: {
-        nodes: sankeyNodes,
-        links: sankeyLinks.map((l) => ({
-          client_id: l.client_id,
-          source: l.source,
-          target: l.target,
-          value: Number(l.value),
-          language: l.language,
-        })),
-        clientIds: Array.from(new Set(sankeyLinks.map((l) => l.client_id).filter(Boolean))).sort(),
-      },
       clientRanking: clientsRes.rows.map((r) => ({
         client_id: r.client_id,
         published_count: Number(r.published_count),
@@ -241,19 +202,19 @@ export async function GET() {
         created_count: Number(r.created_count),
         publish_rate: Number(r.publish_rate),
       })),
-      stacked: {
-        data: stackedData,
-        outputTypes: Array.from(outputTypes),
-      },
-      velocity: velocityRes.rows.map((r) => ({
-        group_name: r.group_name,
-        avg_hours: Number(r.avg_hours),
-        min_hours: Number(r.min_hours),
-        max_hours: Number(r.max_hours),
-        median_hours: Number(r.median_hours),
-        q1_hours: Number(r.q1_hours),
-        q3_hours: Number(r.q3_hours),
+      monthlyContribution,
+      clientIds: Array.from(clientIds).sort(),
+      clientShare: clientShareRes.rows.map((r) => ({
+        client_id: r.client_id,
+        createdHours: Number(r.created_hours),
+        publishedHours: Number(r.published_hours),
+        uploadedHours: Number(r.uploaded_hours),
       })),
+      languageMatrix: {
+        clients: Object.keys(langMatrix).sort(),
+        languages: Array.from(languages).sort(),
+        data: langMatrix,
+      },
     });
   } catch (err) {
     console.error("Page3 API failed", err);

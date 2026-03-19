@@ -61,7 +61,9 @@ export async function GET(req: NextRequest) {
       outputTypeRes,
       languageRes,
       monthlyRes,
+      monthlyByClientRes,
       overallRes,
+      riskTableRes,
     ] = await Promise.all([
       query("SELECT DISTINCT client_id FROM channel_processing_summary WHERE client_id IS NOT NULL ORDER BY client_id"),
 
@@ -167,6 +169,14 @@ export async function GET(req: NextRequest) {
         params
       ),
 
+      // Monthly by client (for trend drill-down; always unfiltered)
+      query(
+        `SELECT client_id, month,
+                total_uploaded, total_created, total_published
+         FROM monthly_processing_summary
+         ORDER BY month, client_id`
+      ),
+
       query(
         `SELECT
            COALESCE(SUM(uploaded_count), 0)::int AS total_uploaded,
@@ -180,6 +190,57 @@ export async function GET(req: NextRequest) {
          WHERE 1=1 ${clientWhereAndCps}`,
         params
       ),
+
+      query<{
+        client_id: string;
+        total_videos: number;
+        unknown_input: number;
+        pub_no_platform: number;
+        pub_no_url: number;
+        total_created: number;
+        total_published: number;
+        output_types_used: number;
+        total_output_types: number;
+        created_hours: number;
+      }>(`
+        WITH vq AS (
+          SELECT client_id, COUNT(*)::int AS total_videos,
+            COUNT(*) FILTER (WHERE input_type_name IS NULL OR input_type_name = 'Unknown')::int AS unknown_input,
+            COUNT(*) FILTER (WHERE published_flag AND published_platform IS NULL)::int AS pub_no_platform,
+            COUNT(*) FILTER (WHERE published_flag AND (published_url IS NULL OR published_url = ''))::int AS pub_no_url
+          FROM videos GROUP BY client_id
+        ),
+        cps AS (
+          SELECT client_id,
+            SUM(uploaded_count)::int AS total_videos,
+            SUM(created_count)::int AS total_created,
+            SUM(published_count)::int AS total_published
+          FROM channel_processing_summary GROUP BY client_id
+        ),
+        pc AS (
+          SELECT client_id, total_videos, total_created, total_published FROM cps
+        ),
+        ot AS (
+          SELECT client_id, COUNT(DISTINCT output_type)::int AS output_types_used
+          FROM output_type_processing_summary WHERE published_count > 0 GROUP BY client_id
+        ),
+        tt AS (SELECT COUNT(DISTINCT output_type)::int AS cnt FROM output_type_processing_summary),
+        dh AS (
+          SELECT client_id,
+            ROUND(SUM(CASE WHEN total_created_duration IS NOT NULL AND TRIM(COALESCE(total_created_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (total_created_duration::text::interval)) ELSE 0 END) / 3600, 1)::numeric AS created_hours
+          FROM monthly_duration_summary GROUP BY client_id
+        )
+        SELECT c.client_id, COALESCE(pc.total_videos,0) AS total_videos,
+          COALESCE(vq.unknown_input,0) AS unknown_input, COALESCE(vq.pub_no_platform,0) AS pub_no_platform,
+          COALESCE(vq.pub_no_url,0) AS pub_no_url, COALESCE(pc.total_created,0) AS total_created,
+          COALESCE(pc.total_published,0) AS total_published, COALESCE(ot.output_types_used,0) AS output_types_used,
+          tt.cnt AS total_output_types, COALESCE(dh.created_hours,0) AS created_hours
+        FROM clients c CROSS JOIN tt
+        LEFT JOIN vq ON c.client_id = vq.client_id LEFT JOIN pc ON c.client_id = pc.client_id
+        LEFT JOIN ot ON c.client_id = ot.client_id LEFT JOIN dh ON c.client_id = dh.client_id
+        ORDER BY COALESCE(pc.total_published,0) DESC
+      `),
     ]);
 
     const overall = (overallRes.rows[0] as Record<string, string>) || {};
@@ -243,6 +304,25 @@ export async function GET(req: NextRequest) {
         language: toBreakdown(languageRes.rows as SummaryRow[]),
       },
       trend: trendData,
+      monthlyByClient: (monthlyByClientRes.rows as { client_id: string; month: string; total_uploaded: string | number; total_created: string | number; total_published: string | number }[]).map((r) => ({
+        client_id: r.client_id,
+        month: r.month,
+        uploaded: Number(r.total_uploaded),
+        processed: Number(r.total_created),
+        published: Number(r.total_published),
+      })),
+      riskTable: riskTableRes.rows.map((r) => ({
+        client_id: r.client_id,
+        totalVideos: Number(r.total_videos),
+        unknownInput: Number(r.unknown_input),
+        pubNoPlatform: Number(r.pub_no_platform),
+        pubNoUrl: Number(r.pub_no_url),
+        totalCreated: Number(r.total_created),
+        totalPublished: Number(r.total_published),
+        outputTypesUsed: Number(r.output_types_used),
+        totalOutputTypes: Number(r.total_output_types),
+        createdHours: Number(r.created_hours),
+      })),
     };
 
     return NextResponse.json(response);

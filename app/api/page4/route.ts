@@ -15,9 +15,13 @@ export async function GET() {
       featureByClientRes,
       amplificationRes,
       platformHoursRes,
+      platformHoursByClientRes,
       languageByClientRes,
       riskTableRes,
       videosRes,
+      sankeyRes,
+      stackedRes,
+      velocityRes,
     ] = await Promise.all([
       // 1. KPI — total durations
       client.query<{
@@ -175,6 +179,53 @@ export async function GET() {
         ) AS t(platform, hours)
       `),
 
+      // 9b. Platform hours by client (for drill-down)
+      client.query<{ client_id: string; platform: string; hours: number }>(`
+        WITH unpiv AS (
+          SELECT client_id, 'YouTube' AS platform,
+            COALESCE(SUM(CASE WHEN youtube_duration IS NOT NULL AND TRIM(COALESCE(youtube_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (youtube_duration::text::interval)) ELSE 0 END), 0)/3600 AS hrs
+          FROM channel_wise_publishing_duration GROUP BY client_id
+          UNION ALL
+          SELECT client_id, 'Instagram',
+            COALESCE(SUM(CASE WHEN instagram_duration IS NOT NULL AND TRIM(COALESCE(instagram_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (instagram_duration::text::interval)) ELSE 0 END), 0)/3600
+          FROM channel_wise_publishing_duration GROUP BY client_id
+          UNION ALL
+          SELECT client_id, 'Facebook',
+            COALESCE(SUM(CASE WHEN facebook_duration IS NOT NULL AND TRIM(COALESCE(facebook_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (facebook_duration::text::interval)) ELSE 0 END), 0)/3600
+          FROM channel_wise_publishing_duration GROUP BY client_id
+          UNION ALL
+          SELECT client_id, 'LinkedIn',
+            COALESCE(SUM(CASE WHEN linkedin_duration IS NOT NULL AND TRIM(COALESCE(linkedin_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (linkedin_duration::text::interval)) ELSE 0 END), 0)/3600
+          FROM channel_wise_publishing_duration GROUP BY client_id
+          UNION ALL
+          SELECT client_id, 'Reels',
+            COALESCE(SUM(CASE WHEN reels_duration IS NOT NULL AND TRIM(COALESCE(reels_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (reels_duration::text::interval)) ELSE 0 END), 0)/3600
+          FROM channel_wise_publishing_duration GROUP BY client_id
+          UNION ALL
+          SELECT client_id, 'Shorts',
+            COALESCE(SUM(CASE WHEN shorts_duration IS NOT NULL AND TRIM(COALESCE(shorts_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (shorts_duration::text::interval)) ELSE 0 END), 0)/3600
+          FROM channel_wise_publishing_duration GROUP BY client_id
+          UNION ALL
+          SELECT client_id, 'X',
+            COALESCE(SUM(CASE WHEN x_duration IS NOT NULL AND TRIM(COALESCE(x_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (x_duration::text::interval)) ELSE 0 END), 0)/3600
+          FROM channel_wise_publishing_duration GROUP BY client_id
+          UNION ALL
+          SELECT client_id, 'Threads',
+            COALESCE(SUM(CASE WHEN threads_duration IS NOT NULL AND TRIM(COALESCE(threads_duration::text, '')) != ''
+              THEN EXTRACT(EPOCH FROM (threads_duration::text::interval)) ELSE 0 END), 0)/3600
+          FROM channel_wise_publishing_duration GROUP BY client_id
+        )
+        SELECT client_id, platform, ROUND(hrs::numeric, 1)::numeric(10,1) AS hours
+        FROM unpiv WHERE hrs > 0 ORDER BY platform, hours DESC
+      `),
+
       // 10. Language × Client processing hours
       client.query<{
         client_id: string;
@@ -269,6 +320,118 @@ export async function GET() {
         WHERE v.published_flag = true
         ORDER BY v.published_at DESC NULLS LAST LIMIT 100
       `),
+
+      // 13. Sankey Flow (Content Flow Network)
+      client.query<{
+        client_id: string;
+        source: string;
+        target: string;
+        value: number;
+        language: string;
+      }>(`
+        SELECT v.client_id,
+               INITCAP(LOWER(TRIM(v.input_type_name))) AS source,
+               INITCAP(LOWER(TRIM(cs.channel_name))) AS target,
+               COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown') AS language,
+               COUNT(*)::int AS value
+        FROM videos v
+        JOIN channel_processing_summary cs ON cs.client_id = v.client_id AND cs.channel_id = v.channel_id
+        WHERE v.input_type_name IS NOT NULL
+          AND cs.channel_name IS NOT NULL
+        GROUP BY v.client_id,
+                 LOWER(TRIM(v.input_type_name)),
+                 LOWER(TRIM(cs.channel_name)),
+                 COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown')
+        HAVING COUNT(*) > 0
+
+        UNION ALL
+
+        SELECT v.client_id,
+               INITCAP(LOWER(TRIM(cs.channel_name))) AS source,
+               INITCAP(LOWER(TRIM(v.output_type_name))) AS target,
+               COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown') AS language,
+               COUNT(*)::int AS value
+        FROM videos v
+        JOIN channel_processing_summary cs ON cs.client_id = v.client_id AND cs.channel_id = v.channel_id
+        WHERE cs.channel_name IS NOT NULL
+          AND v.output_type_name IS NOT NULL
+        GROUP BY v.client_id,
+                 LOWER(TRIM(cs.channel_name)),
+                 LOWER(TRIM(v.output_type_name)),
+                 COALESCE(NULLIF(TRIM(v.language_name), ''), 'Unknown')
+        HAVING COUNT(*) > 0
+
+        ORDER BY value DESC
+      `),
+
+      // 14. Platform × Output Type Stacked (Platform Publishing Mix)
+      client.query<{
+        platform: string;
+        output_type: string;
+        cnt: number;
+      }>(`
+        WITH all_output_types AS (
+          SELECT DISTINCT INITCAP(LOWER(TRIM(output_type_name))) AS output_type_name
+          FROM videos WHERE output_type_name IS NOT NULL
+        ),
+        all_platforms AS (
+          SELECT DISTINCT INITCAP(LOWER(TRIM(published_platform))) AS published_platform
+          FROM videos WHERE published_flag AND published_platform IS NOT NULL
+        ),
+        combos AS (
+          SELECT p.published_platform AS platform, o.output_type_name AS output_type
+          FROM all_platforms p CROSS JOIN all_output_types o
+        ),
+        counts AS (
+          SELECT
+            INITCAP(LOWER(TRIM(published_platform))) AS platform,
+            INITCAP(LOWER(TRIM(output_type_name))) AS output_type,
+            COUNT(*)::int AS cnt
+          FROM videos
+          WHERE published_flag AND published_platform IS NOT NULL AND output_type_name IS NOT NULL
+          GROUP BY LOWER(TRIM(published_platform)), LOWER(TRIM(output_type_name))
+        )
+        SELECT
+          c.platform,
+          c.output_type,
+          COALESCE(counts.cnt, 0)::int AS cnt
+        FROM combos c
+        LEFT JOIN counts ON c.platform = counts.platform AND c.output_type = counts.output_type
+        ORDER BY c.platform, c.output_type
+      `),
+
+      // 15. Production Velocity
+      client.query<{
+        group_name: string;
+        avg_hours: number;
+        min_hours: number;
+        max_hours: number;
+        median_hours: number;
+        q1_hours: number;
+        q3_hours: number;
+      }>(`
+        SELECT
+          INITCAP(LOWER(TRIM(published_platform))) AS group_name,
+          ROUND(AVG(EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600)::numeric, 1) AS avg_hours,
+          ROUND(MIN(EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600)::numeric, 1) AS min_hours,
+          ROUND(MAX(EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600)::numeric, 1) AS max_hours,
+          ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (
+            ORDER BY EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600
+          )::numeric, 1) AS median_hours,
+          ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (
+            ORDER BY EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600
+          )::numeric, 1) AS q1_hours,
+          ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (
+            ORDER BY EXTRACT(EPOCH FROM (published_at - uploaded_at)) / 3600
+          )::numeric, 1) AS q3_hours
+        FROM videos
+        WHERE published_flag
+          AND published_at IS NOT NULL
+          AND uploaded_at IS NOT NULL
+          AND published_platform IS NOT NULL
+        GROUP BY LOWER(TRIM(published_platform))
+        ORDER BY avg_hours DESC
+      `),
     ]);
 
     const dur = kpiDurationRes.rows[0];
@@ -299,6 +462,28 @@ export async function GET() {
     }
     const sortedMonths = [...monthMap.keys()].sort();
     const monthlyContribution = sortedMonths.map((ym) => ({ month: formatMonth(ym), ...monthMap.get(ym)! }));
+
+    // Sankey nodes + links
+    const sankeyLinks = sankeyRes.rows;
+    const nodeSet = new Set<string>();
+    for (const link of sankeyLinks) {
+      nodeSet.add(link.source);
+      nodeSet.add(link.target);
+    }
+    const sankeyNodes = Array.from(nodeSet).map((name) => ({ name }));
+
+    // Platform stacked data
+    const platformMap = new Map<string, Record<string, number>>();
+    const stackedOutputTypes = new Set<string>();
+    for (const row of stackedRes.rows) {
+      stackedOutputTypes.add(row.output_type);
+      if (!platformMap.has(row.platform)) platformMap.set(row.platform, {});
+      platformMap.get(row.platform)![row.output_type] = Number(row.cnt);
+    }
+    const stackedData = Array.from(platformMap.entries()).map(([platform, types]) => ({
+      platform,
+      ...types,
+    }));
 
     const outputTypes = new Set<string>();
     const featureMatrix: Record<string, Record<string, { created: number; published: number }>> = {};
@@ -387,6 +572,11 @@ export async function GET() {
         .map((r) => ({ platform: r.platform, hours: Number(r.hours) }))
         .filter((r) => r.hours > 0)
         .sort((a, b) => b.hours - a.hours),
+      platformHoursByClient: (platformHoursByClientRes.rows as { client_id: string; platform: string; hours: string | number }[]).map((r) => ({
+        client_id: r.client_id,
+        platform: r.platform,
+        hours: Number(r.hours),
+      })),
       languageMatrix: {
         clients: Object.keys(langMatrix).sort(),
         languages: Array.from(languages).sort(),
@@ -412,6 +602,30 @@ export async function GET() {
         output_type_name: r.output_type_name,
         published_platform: r.published_platform,
         published_url: r.published_url,
+      })),
+      sankey: {
+        nodes: sankeyNodes,
+        links: sankeyLinks.map((l) => ({
+          client_id: l.client_id,
+          source: l.source,
+          target: l.target,
+          value: Number(l.value),
+          language: l.language,
+        })),
+        clientIds: Array.from(new Set(sankeyLinks.map((l) => l.client_id).filter(Boolean))).sort(),
+      },
+      stacked: {
+        data: stackedData,
+        outputTypes: Array.from(stackedOutputTypes),
+      },
+      velocity: velocityRes.rows.map((r) => ({
+        group_name: r.group_name,
+        avg_hours: Number(r.avg_hours),
+        min_hours: Number(r.min_hours),
+        max_hours: Number(r.max_hours),
+        median_hours: Number(r.median_hours),
+        q1_hours: Number(r.q1_hours),
+        q3_hours: Number(r.q3_hours),
       })),
     };
 

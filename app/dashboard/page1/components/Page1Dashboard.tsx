@@ -5,9 +5,7 @@ import type { Page1Data } from "./types";
 import KPIGrid from "./KPIGrid";
 import LifecycleTrendChart from "./LifecycleTrendChart";
 import PipelineStats from "./PipelineStats";
-import TopFormatsChart from "./TopFormatsChart";
-import DataHealthTable from "./DataHealthTable";
-import { EfficiencyMatrix } from "@/components/page3-charts";
+import { FeatureAdoptionHeatmap } from "@/components/page4-charts";
 
 export default function Page1Dashboard() {
   const [data, setData] = useState<Page1Data | null>(null);
@@ -86,35 +84,26 @@ export default function Page1Dashboard() {
           refreshing ? "pointer-events-none opacity-60" : "opacity-100"
         }`}
       >
-        {/* Tier 1: Executive Vital Signs - 9 KPI Cards */}
-        <div className="mb-6">
-          <KPIGrid kpis={data.kpis} />
-        </div>
-
-        {/* Tier 2: Strategic Trends - 2/3 left, 1/3 right */}
-        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <LifecycleTrendChart data={data.lifecycleTrend} />
+        {/* One-page layout:
+            Top = KPIs (left) + lifecycle/pipeline (right), same baseline
+            Bottom = Feature Adoption by Client (full width) */}
+        <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-stretch">
+            <div className="lg:col-span-5 flex flex-col">
+              <KPIGrid kpis={data.kpis} />
+            </div>
+            <div className="lg:col-span-7 flex flex-col min-h-0 grid grid-rows-[1fr_auto] gap-2">
+              <div className="min-h-0">
+                <LifecycleTrendChart data={data.lifecycleTrend} />
+              </div>
+              <div className="min-h-0">
+                <PipelineStats data={data.pipelineStats} />
+              </div>
+            </div>
           </div>
-          <div>
-            <PipelineStats data={data.pipelineStats} />
+          <div className="min-h-[360px] lg:min-h-[420px]">
+            <FeatureAdoptionHeatmap matrix={data.featureMatrix} />
           </div>
-        </div>
-
-        {/* Tier 3: Operational Drivers - 3 equal columns */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {/* <div className="min-h-[360px]">
-            <EfficiencyMatrix data={data.efficiencyMatrix} />
-          </div> */}
-          <div>
-            <TopFormatsChart
-              data={data.topFormatsOverTime}
-              outputTypes={data.topFormatsOutputTypes}
-            />
-          </div>
-          {/* <div>
-            <DataHealthTable alerts={data.dataHealthAlerts} />
-          </div> */}
         </div>
       </div>
     </div>

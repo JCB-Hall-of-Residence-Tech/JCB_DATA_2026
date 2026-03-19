@@ -127,15 +127,15 @@ const CARD_DEFINITIONS: Array<{
 
 export default function KPIGrid({ kpis }: KPIGridProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-3">
-      <div className="flex items-center justify-between mb-3 gap-2">
+    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-2.5">
+      <div className="flex items-center justify-between mb-2 gap-2">
         <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
           Executive Vital Signs
           <span className="flex-1 h-px bg-gray-100" />
         </h4>
         <DefinitionButton definition="Key performance indicators for the CEO dashboard. Each card has its own definition — click the ? on any card for details." />
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
         {CARD_DEFINITIONS.map((def) => {
           const trendVal =
             def.improvementDirection !== "none"

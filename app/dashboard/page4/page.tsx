@@ -3,39 +3,33 @@
 import { useEffect, useState } from "react";
 import {
   KPIInsightCards,
-  MonthlyContributionChart,
-  ClientMomentumTracker,
-  ClientShareDonut,
   AmplificationChart,
   PlatformHoursChart,
-  FeatureAdoptionHeatmap,
-  LanguageHeatmap,
-  DataQualityMonitor,
-  RiskTable,
-  VideoExplorer,
+  // DataQualityMonitor,
+  // VideoExplorer,
   type Page4KPIs,
   type DataQuality,
-  type ClientShare,
-  type FeatureMatrix,
-  type LanguageMatrix,
   type AmplificationRow,
   type PlatformHoursRow,
-  type RiskRow,
   type VideoRow,
 } from "@/components/page4-charts";
+import {
+  SankeyFlow,
+  PlatformStackedChart,
+  VelocityChart,
+} from "@/components/page3-charts";
 
 type Page4Data = {
   kpis: Page4KPIs;
   dataQuality: DataQuality;
-  monthlyContribution: Record<string, string | number>[];
-  clientIds: string[];
-  clientShare: ClientShare[];
-  featureMatrix: FeatureMatrix;
   amplification: AmplificationRow[];
   platformHours: PlatformHoursRow[];
-  languageMatrix: LanguageMatrix;
-  riskTable: RiskRow[];
+  platformHoursByClient?: { client_id: string; platform: string; hours: number }[];
+  featureMatrix?: { clients: string[]; outputTypes: string[]; data: Record<string, Record<string, { created: number; published: number }>> };
   videoExplorer: VideoRow[];
+  sankey: { nodes: { name: string }[]; links: { client_id: string; source: string; target: string; value: number; language: string }[]; clientIds: string[] };
+  stacked: { data: Record<string, string | number>[]; outputTypes: string[] };
+  velocity: { group_name: string; avg_hours: number; min_hours: number; max_hours: number; median_hours: number; q1_hours: number; q3_hours: number }[];
 };
 
 export default function Page4() {
@@ -96,37 +90,36 @@ export default function Page4() {
         </span>
       </div>
 
-      <div className="px-5 pb-8 space-y-4">
+      <div className="px-5 pb-8 space-y-6">
         {/* Row 1: KPI Insight Cards */}
         <KPIInsightCards kpis={data.kpis} />
 
-        {/* Row 2: Usage Trends — Monthly Contribution | Growth Momentum | Client Share */}
-        <div className="grid grid-cols-1 lg:grid-cols-[5fr_2fr_3fr] gap-3" style={{ height: 340 }}>
-          <MonthlyContributionChart data={data.monthlyContribution} clientIds={data.clientIds} />
-          <ClientMomentumTracker data={data.monthlyContribution} clientIds={data.clientIds} />
-          <ClientShareDonut data={data.clientShare} />
+        {/* Row 2: Content Amplification Factor | Published Duration by Platform (left-right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-[360px] min-h-[320px]">
+            <AmplificationChart data={data.amplification} featureMatrix={data.featureMatrix} />
+          </div>
+          <div className="h-[360px] min-h-[320px]">
+            <PlatformHoursChart data={data.platformHours} platformHoursByClient={data.platformHoursByClient} />
+          </div>
         </div>
 
-        {/* Row 3: Content Amplification Factor | Language Coverage */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ minHeight: 340 }}>
-          <AmplificationChart data={data.amplification} />
-          <LanguageHeatmap matrix={data.languageMatrix} />
+        {/* Data Quality Monitor — commented out */}
+        {/* <DataQualityMonitor dq={data.dataQuality} /> */}
+
+        {/* Video Explorer — commented out */}
+        {/* <VideoExplorer data={data.videoExplorer} /> */}
+
+        {/* Row 4: Content Flow Network */}
+        <div style={{ minHeight: 400 }}>
+          <SankeyFlow nodes={data.sankey.nodes} links={data.sankey.links} clientIds={data.sankey.clientIds} />
         </div>
 
-        {/* Row 4: Data Quality Monitor | Published Duration by Platform */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ minHeight: 320 }}>
-          <DataQualityMonitor dq={data.dataQuality} />
-          <PlatformHoursChart data={data.platformHours} />
+        {/* Row 5: Platform Publishing Mix | Production Velocity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ minHeight: 380 }}>
+          <PlatformStackedChart data={data.stacked.data} outputTypes={data.stacked.outputTypes} />
+          <VelocityChart data={data.velocity} />
         </div>
-
-        {/* Row 5: Feature Adoption Heatmap */}
-        <FeatureAdoptionHeatmap matrix={data.featureMatrix} />
-
-        {/* Row 7: Risk & Underperformance Table */}
-        <RiskTable data={data.riskTable} />
-
-        {/* Row 8: Video Explorer */}
-        <VideoExplorer data={data.videoExplorer} />
       </div>
     </div>
   );

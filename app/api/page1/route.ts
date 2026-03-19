@@ -31,6 +31,7 @@ export async function GET() {
       lifecycleDurRes,
       efficiencyRes,
       topFormatsRes,
+      featureAdoptionRes,
       dataHealthRes,
       timeToMarketMonthlyRes,
       contentWasteMonthlyRes,
@@ -216,6 +217,20 @@ export async function GET() {
           AND output_type_name IS NOT NULL
         GROUP BY TO_CHAR(published_at, 'YYYY-MM'), output_type_name
         ORDER BY month, output_type_name
+      `),
+
+      // Feature adoption matrix (client x output_type)
+      query(`
+        SELECT
+          client_id,
+          output_type,
+          COALESCE(SUM(created_count), 0)::int AS created_count,
+          COALESCE(SUM(published_count), 0)::int AS published_count
+        FROM output_type_processing_summary
+        WHERE client_id IS NOT NULL
+          AND output_type IS NOT NULL
+        GROUP BY client_id, output_type
+        ORDER BY client_id, output_type
       `),
 
       // Data Health Alerts (videos table has no headline column in schema)
@@ -428,6 +443,27 @@ export async function GET() {
 
     const outputTypes = [...new Set(topFormatsRows.map((r) => r.output_type))].sort();
 
+    // Feature adoption matrix (for Page 1 lower panel)
+    const featureRows = featureAdoptionRes.rows as {
+      client_id: string;
+      output_type: string;
+      created_count: string | number;
+      published_count: string | number;
+    }[];
+    const featureClients = Array.from(new Set(featureRows.map((r) => r.client_id))).sort();
+    const featureOutputTypes = Array.from(new Set(featureRows.map((r) => r.output_type))).sort();
+    const featureMatrixData: Record<
+      string,
+      Record<string, { created: number; published: number }>
+    > = {};
+    for (const row of featureRows) {
+      if (!featureMatrixData[row.client_id]) featureMatrixData[row.client_id] = {};
+      featureMatrixData[row.client_id][row.output_type] = {
+        created: Number(row.created_count ?? 0),
+        published: Number(row.published_count ?? 0),
+      };
+    }
+
     // Data health alerts
     const dataHealthAlerts = (dataHealthRes.rows as { video_id: string; published_platform: string | null; user_id: string; issue_type: string }[]).map((r) => ({
       video_id: r.video_id,
@@ -527,6 +563,11 @@ export async function GET() {
       efficiencyMatrix,
       topFormatsOverTime,
       topFormatsOutputTypes: outputTypes,
+      featureMatrix: {
+        clients: featureClients,
+        outputTypes: featureOutputTypes,
+        data: featureMatrixData,
+      },
       dataHealthAlerts,
     };
 

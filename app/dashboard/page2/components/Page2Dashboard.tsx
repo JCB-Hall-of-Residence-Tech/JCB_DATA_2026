@@ -6,11 +6,10 @@ import FilterBar from "./FilterBar";
 import AnalysisBarChart from "./BarChart";
 import DonutChart from "./DonutChart";
 import TrendChart from "./TrendChart";
-import KPIGrid from "./KPIGrid";
 import FunnelKPIs from "./FunnelKPIs";
-import FunnelBars from "./FunnelBars";
-import BreakdownList from "./BreakdownList";
-import UCCTable from "./UCCTable";
+import RiskTableWithDrilldown from "./RiskTableWithDrilldown";
+// import FunnelBars from "./FunnelBars";
+// import UCCTable from "./UCCTable";
 import InferenceBox from "./InferenceBox";
 
 const DIMENSION_OPTIONS: { value: DimensionKey; label: string }[] = [
@@ -268,14 +267,14 @@ export default function Page2Dashboard() {
               variant="insight"
             />
 
-            {/* Breakdown */}
-            <BreakdownList
+            {/* Breakdown — commented out */}
+            {/* <BreakdownList
               data={data.breakdowns}
               dimensions={breakdownDimensions}
-            />
+            /> */}
 
-            {/* KPIs */}
-            <KPIGrid kpis={data.kpis} />
+            {/* KPIs — commented out */}
+            {/* <KPIGrid kpis={data.kpis} /> */}
           </div>
         </div>
 
@@ -305,15 +304,23 @@ export default function Page2Dashboard() {
           </div>
           <div className="p-4 flex flex-col gap-4 overflow-y-auto flex-1">
             <FunnelKPIs kpis={data.kpis} />
-            <TrendChart data={data.trend} />
-            <FunnelBars kpis={data.kpis} />
-            <InferenceBox
+            <TrendChart data={data.trend} monthlyByClient={data.monthlyByClient} />
+            {/* FunnelBars — commented out */}
+            {/* <FunnelBars kpis={data.kpis} /> */}
+            {/* InferenceBox (Drop-off alert) — commented out */}
+            {/* <InferenceBox
               data={data.breakdowns.channel}
               label="channel"
               variant="alert"
-            />
-            <UCCTable data={data.breakdowns} />
+            /> */}
+            {/* UCCTable (Uploaded vs Published) — commented out */}
+            {/* <UCCTable data={data.breakdowns} /> */}
           </div>
+        </div>
+
+        {/* Bottom: Client Risk & Underperformance Monitor */}
+        <div className="lg:col-span-2">
+          <RiskTableWithDrilldown data={data.riskTable} />
         </div>
       </div>
     </div>

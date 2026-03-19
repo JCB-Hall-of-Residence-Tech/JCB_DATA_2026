@@ -23,7 +23,7 @@ function MiniSparkline({ values }: { values: number[] }) {
     <svg
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
-      className="w-full h-8 text-red-500"
+      className="w-full h-full text-red-500 min-h-[20px]"
     >
       <polyline
         fill="none"
@@ -56,16 +56,13 @@ export default function PipelineStats({ data }: PipelineStatsProps) {
     publishedValues.reduce((sum, v) => sum + (v || 0), 0);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-4">
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-          Pipeline Stats
-        </h4>
+    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-2.5">
+      <div className="flex items-end justify-end mb-1.5">
         <DefinitionButton definition="Total uploaded count (videos ingested) and total processed count (AI-generated outputs). Sparklines show monthly trend." />
       </div>
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
         <div
-          className="rounded-lg border border-gray-200 bg-white p-4 cursor-pointer hover:border-red-300 hover:shadow-sm"
+          className="rounded-lg border border-gray-200 bg-white p-2.5 cursor-pointer hover:border-red-300 hover:shadow-sm"
           onClick={() => {
             window.location.href = "/dashboard/page2";
           }}
@@ -73,15 +70,15 @@ export default function PipelineStats({ data }: PipelineStatsProps) {
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
             Total Uploaded Count
           </div>
-          <div className="text-xl font-bold text-gray-900 mt-1">
+          <div className="text-xl font-bold text-gray-900 mt-0.5">
             {data.totalUploaded.toLocaleString()}
           </div>
-          <div className="mt-2 h-10">
+          <div className="mt-1 h-5">
             <MiniSparkline values={uploadedValues} />
           </div>
         </div>
         <div
-          className="rounded-lg border border-gray-200 bg-white p-4 cursor-pointer hover:border-red-300 hover:shadow-sm"
+          className="rounded-lg border border-gray-200 bg-white p-2.5 cursor-pointer hover:border-red-300 hover:shadow-sm"
           onClick={() => {
             window.location.href = "/dashboard/page2";
           }}
@@ -89,15 +86,15 @@ export default function PipelineStats({ data }: PipelineStatsProps) {
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
             Total Processed Count
           </div>
-          <div className="text-xl font-bold text-gray-900 mt-1">
+          <div className="text-xl font-bold text-gray-900 mt-0.5">
             {data.totalProcessed.toLocaleString()}
           </div>
-          <div className="mt-2 h-10">
+          <div className="mt-1 h-5">
             <MiniSparkline values={createdValues} />
           </div>
         </div>
         <div
-          className="rounded-lg border border-gray-200 bg-white p-4 cursor-pointer hover:border-red-300 hover:shadow-sm"
+          className="rounded-lg border border-gray-200 bg-white p-2.5 cursor-pointer hover:border-red-300 hover:shadow-sm"
           onClick={() => {
             window.location.href = "/dashboard/page2";
           }}
@@ -105,10 +102,10 @@ export default function PipelineStats({ data }: PipelineStatsProps) {
           <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
             Total Published Count
           </div>
-          <div className="text-xl font-bold text-gray-900 mt-1">
+          <div className="text-xl font-bold text-gray-900 mt-0.5">
             {totalPublishedSafe.toLocaleString()}
           </div>
-          <div className="mt-2 h-10">
+          <div className="mt-1 h-5">
             <MiniSparkline values={publishedValues} />
           </div>
         </div>

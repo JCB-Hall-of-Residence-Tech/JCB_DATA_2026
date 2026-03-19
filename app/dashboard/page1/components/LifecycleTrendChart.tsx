@@ -108,14 +108,14 @@ export default function LifecycleTrendChart({ data }: LifecycleTrendChartProps) 
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-3 h-full flex flex-col min-h-0">
+      <div className="flex items-center justify-between mb-2">
         <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
           Interactive Lifecycle Trend
         </h4>
         <DefinitionButton definition="Monthly trend of uploaded count or duration per client. Toggle Y-axis and select clients to compare." />
       </div>
-      <div className="flex flex-wrap gap-3 mb-3">
+      <div className="flex flex-wrap gap-2 mb-2">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
             Y-axis:
@@ -187,7 +187,7 @@ export default function LifecycleTrendChart({ data }: LifecycleTrendChartProps) 
           })}
         </div>
       </div>
-      <div className="h-[200px] sm:h-[240px]">
+      <div className="flex-1 min-h-[100px]">
         {datasets.length > 0 ? (
           <Line
             data={{ labels: allMonths, datasets }}
