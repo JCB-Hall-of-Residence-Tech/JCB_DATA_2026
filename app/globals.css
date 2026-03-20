@@ -1,11 +1,22 @@
 @import "tailwindcss";
 
-/* ── Dark mode (class-based via .dark on <html>) ──────────────────────── */
+/* ── Dark mode: CSS filter approach (consistent, like Dark Reader) ────── */
+/* invert(100%) flips all luminance; hue-rotate(180deg) brings hues back   */
+/* to their correct color family but in dark variants.                      */
 @variant dark (&:is(.dark *));
 
-/* ── Design Tokens ────────────────────────────────────────────────────── */
+html.dark {
+  filter: invert(100%) hue-rotate(180deg) brightness(0.9) contrast(0.9);
+}
+
+/* Counter-invert real images/videos so they keep natural colors */
+html.dark img,
+html.dark video {
+  filter: invert(100%) hue-rotate(180deg) brightness(1.11) contrast(1.11);
+}
+
+/* ── Design Tokens (light mode only — filter handles dark) ────────────── */
 :root {
-  /* Light mode */
   --bg-void: #f2f4fb;
   --bg-card: rgba(255, 255, 255, 0.72);
   --bg-glass: rgba(255, 255, 255, 0.55);
@@ -18,28 +29,8 @@
   --kpi-grad-to: #e9434a;
   --brand-grad: linear-gradient(135deg, #e9434a 0%, #ff6b35 60%, #ffb347 100%);
   --aurora-a: rgba(233, 67, 74, 0.09);
-  --aurora-b: rgba(255, 140, 66, 0.05);
   --scroll-thumb: #d1d5db;
   --nav-active-shadow: rgba(233, 67, 74, 0.35);
-}
-
-.dark {
-  /* Dark mode */
-  --bg-void: #06061a;
-  --bg-card: rgba(255, 255, 255, 0.045);
-  --bg-glass: rgba(255, 255, 255, 0.065);
-  --border-dim: rgba(255, 255, 255, 0.07);
-  --border-glass: rgba(255, 255, 255, 0.10);
-  --text-1: #eeeeff;
-  --text-2: #9898bb;
-  --text-3: #55556a;
-  --kpi-grad-from: #ffffff;
-  --kpi-grad-to: #ff9999;
-  --brand-grad: linear-gradient(135deg, #ffffff 0%, #ffcccc 35%, #ff7777 65%, #ff4444 100%);
-  --aurora-a: rgba(233, 67, 74, 0.16);
-  --aurora-b: rgba(120, 40, 200, 0.08);
-  --scroll-thumb: #1e1e3a;
-  --nav-active-shadow: rgba(233, 67, 74, 0.45);
 }
 
 @theme inline {
@@ -68,9 +59,6 @@ body {
   border-color: rgba(233, 67, 74, 0.25);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(233, 67, 74, 0.08);
 }
-.dark .glass-card:hover {
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(233, 67, 74, 0.2), 0 0 60px rgba(233, 67, 74, 0.04);
-}
 
 /* ── Gradient text ────────────────────────────────────────────────────── */
 .gradient-text-brand {
@@ -94,7 +82,6 @@ body {
   pointer-events: none;
   z-index: -1;
   background: var(--bg-void);
-  transition: background 0.4s;
 }
 .aurora-bg::before {
   content: '';
@@ -110,81 +97,6 @@ body {
   background-image: radial-gradient(var(--border-dim) 1px, transparent 1px);
   background-size: 28px 28px;
   opacity: 0.8;
-}
-
-/* ── Dark mode page & card overrides ──────────────────────────────────── */
-/* Pages use bg-white — make them transparent in dark so aurora shows */
-.dark .min-h-screen.bg-white,
-.dark main > div.min-h-screen {
-  background: transparent !important;
-}
-
-/* Main card panels (rounded-2xl border) in dark mode get glass */
-.dark .rounded-2xl.border.bg-white {
-  background: var(--bg-card) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-color: var(--border-glass) !important;
-}
-.dark .rounded-2xl.shadow-sm {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
-}
-
-/* Sub-cards and stat blocks in dark */
-.dark .rounded-xl.border.bg-gray-50\/50,
-.dark .rounded-xl.border-gray-100.bg-gray-50\/50 {
-  background: rgba(255, 255, 255, 0.025) !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
-}
-.dark .bg-white.rounded-lg,
-.dark .rounded-lg.border.bg-white {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border-color: rgba(255, 255, 255, 0.07) !important;
-}
-
-/* Gradient header bars inside panels */
-.dark .bg-gradient-to-r.from-white {
-  background: linear-gradient(to right, rgba(255,255,255,0.03), rgba(233,67,74,0.05)) !important;
-}
-
-/* Text colors */
-.dark .text-gray-900 { color: rgba(238, 238, 255, 0.95) !important; }
-.dark .text-gray-800 { color: rgba(220, 220, 240, 0.90) !important; }
-.dark .text-gray-700 { color: rgba(200, 200, 225, 0.80) !important; }
-.dark .text-gray-600 { color: rgba(180, 180, 210, 0.70) !important; }
-.dark .text-gray-500 { color: rgba(150, 150, 185, 0.65) !important; }
-.dark .text-gray-400 { color: rgba(120, 120, 160, 0.60) !important; }
-.dark .text-gray-300 { color: rgba(100, 100, 140, 0.55) !important; }
-
-/* Borders */
-.dark .border-gray-200 { border-color: rgba(255, 255, 255, 0.08) !important; }
-.dark .border-gray-100 { border-color: rgba(255, 255, 255, 0.05) !important; }
-.dark .bg-gray-100 { background: rgba(255, 255, 255, 0.05) !important; }
-.dark .bg-gray-50 { background: rgba(255, 255, 255, 0.03) !important; }
-
-/* Accent colors */
-.dark .bg-red-50 { background: rgba(233, 67, 74, 0.10) !important; }
-.dark .text-red-500 { color: #ff6b6b !important; }
-.dark .text-red-600 { color: #ff5555 !important; }
-.dark .border-red-200 { border-color: rgba(233, 67, 74, 0.3) !important; }
-.dark .bg-emerald-50 { background: rgba(16, 185, 129, 0.10) !important; }
-.dark .text-emerald-600 { color: #34d399 !important; }
-.dark .border-emerald-100 { border-color: rgba(16, 185, 129, 0.2) !important; }
-.dark .bg-blue-50 { background: rgba(59, 130, 246, 0.10) !important; }
-.dark .text-blue-600 { color: #60a5fa !important; }
-.dark .bg-amber-50 { background: rgba(245, 158, 11, 0.10) !important; }
-.dark .text-amber-500 { color: #fbbf24 !important; }
-
-/* Selects and inputs */
-.dark select,
-.dark input[type="month"] {
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: rgba(220, 220, 240, 0.9) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-.dark option {
-  background: #0f0f2a;
-  color: #eeeeff;
 }
 
 /* ── Scrollbars ───────────────────────────────────────────────────────── */
@@ -228,6 +140,6 @@ body {
   button[title="Metric Dictionary"] {
     display: none !important;
   }
-  html, body { background: white !important; }
+  html, body { background: white !important; filter: none !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }

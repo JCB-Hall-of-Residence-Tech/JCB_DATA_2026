@@ -39,18 +39,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div aria-hidden="true" className="aurora-bg" />
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 border-b
-        dark:bg-[#06061a]/85 bg-white/80
-        dark:border-white/[0.07] border-gray-100
-        backdrop-blur-2xl"
-      >
+      <header className="sticky top-0 z-50 border-b bg-white/80 border-gray-100 backdrop-blur-2xl">
         {/* Thin gradient line at very top */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/70 to-transparent dark:via-red-400/50" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/70 to-transparent" />
 
         <div className="relative flex items-center justify-between px-5 h-14">
           {/* ── Brand ── */}
           <Link href="/dashboard/page1" className="flex items-center gap-2.5 group shrink-0">
-            <div className="relative h-8 w-8 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+            <div
+              className="relative h-8 w-8 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
               style={{
                 background: "linear-gradient(135deg, #ff6b6b 0%, #e9434a 50%, #ff8c42 100%)",
                 boxShadow: "0 4px 16px rgba(233,67,74,0.45), inset 0 1px 0 rgba(255,255,255,0.2)",
@@ -74,7 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className={`relative px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all duration-200 whitespace-nowrap ${
                     isActive
                       ? "text-white"
-                      : "dark:text-white/40 text-gray-500 dark:hover:text-white/75 hover:text-gray-800 dark:hover:bg-white/[0.06] hover:bg-gray-100/80"
+                      : "text-gray-500 hover:text-gray-800 hover:bg-gray-100/80"
                   }`}
                   style={isActive ? {
                     background: "linear-gradient(135deg, #e9434a 0%, #c93040 100%)",
@@ -94,7 +91,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               onClick={() => setDocsOpen(true)}
               title="Metric Dictionary"
               className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200
-                dark:bg-white/[0.06] dark:border-white/[0.10] dark:text-white/55 dark:hover:bg-white/[0.12] dark:hover:text-white/85
                 bg-gray-50 border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600"
             >
               <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -109,7 +105,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               aria-label="Open AI assistant"
               title="Open AI assistant"
               className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200
-                dark:bg-white/[0.06] dark:border-white/[0.10] dark:text-white/55 dark:hover:bg-red-500/15 dark:hover:border-red-500/30 dark:hover:text-red-300
                 bg-gray-50 border border-gray-200 text-gray-600 hover:bg-red-50 hover:border-red-200 hover:text-red-600"
             >
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -123,7 +118,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               onClick={() => window.print()}
               title="Export as PDF"
               className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200
-                dark:bg-white/[0.06] dark:border-white/[0.10] dark:text-white/55 dark:hover:bg-white/[0.12] dark:hover:text-white/85
                 bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
             >
               <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -136,8 +130,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               onClick={toggle}
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              className="flex items-center justify-center h-8 w-8 rounded-xl text-xs font-semibold transition-all duration-200
-                dark:bg-white/[0.06] dark:border-white/[0.10] dark:text-yellow-300/80 dark:hover:bg-yellow-400/10 dark:hover:text-yellow-300
+              className="flex items-center justify-center h-8 w-8 rounded-xl transition-all duration-200
                 bg-gray-50 border border-gray-200 text-gray-600 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600"
             >
               {theme === "dark" ? (
