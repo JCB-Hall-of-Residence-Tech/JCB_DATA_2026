@@ -62,6 +62,15 @@ const TYPE_BADGE_COLOR: Record<string, string> = {
   table: "bg-gray-100 text-gray-600",
 };
 
+function NoDataState({ message = "No data found for this query." }: { message?: string }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-5 text-center">
+      <p className="text-xs font-semibold text-gray-600">{message}</p>
+      <p className="mt-1 text-[10px] text-gray-400">Try broadening filters or changing the date range.</p>
+    </div>
+  );
+}
+
 // ── Widget renderer ───────────────────────────────────────────────────────────
 
 function WidgetRenderer({
@@ -99,8 +108,7 @@ function WidgetRenderer({
       return point;
     });
 
-    if (chartData.length === 0)
-      return <p className="text-xs text-gray-400 py-4 text-center">No data</p>;
+    if (chartData.length === 0) return <NoDataState />;
 
     if (type === "bar") {
       return (
@@ -175,8 +183,7 @@ function WidgetRenderer({
     const values = spec.values ?? [];
     const pieData = labels.map((name, i) => ({ name, value: values[i] ?? 0 }));
 
-    if (pieData.length === 0)
-      return <p className="text-xs text-gray-400 py-4 text-center">No data</p>;
+    if (pieData.length === 0) return <NoDataState />;
 
     return (
       <ResponsiveContainer width="100%" height={190}>
@@ -207,8 +214,7 @@ function WidgetRenderer({
   const cols = spec.columns ?? [];
   const tableRows = spec.rows ?? [];
 
-  if (cols.length === 0)
-    return <p className="text-xs text-gray-400 py-4 text-center">No data</p>;
+  if (cols.length === 0 || tableRows.length === 0) return <NoDataState />;
 
   return (
     <div className="overflow-x-auto max-h-[190px] overflow-y-auto rounded border border-gray-100">
