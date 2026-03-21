@@ -52,18 +52,99 @@ function serializeCell(v: unknown): string | number {
   return typeof v === "number" ? v : String(v);
 }
 
+function isNumericLike(v: unknown): boolean {
+  return typeof v === "number" || (typeof v === "string" && v.trim() !== "" && !isNaN(Number(v)));
+}
+
+function isNumericColumn(col: string, rows: Record<string, unknown>[]): boolean {
+  for (const row of rows) {
+    const v = row[col];
+    if (v == null || v === "") continue;
+    return isNumericLike(v);
+  }
+  return false;
+}
+
+function monthNumber(label: string): number | null {
+  const normalized = label.trim().toLowerCase().replace(/\./g, "");
+  const map: Record<string, number> = {
+    january: 1, jan: 1,
+    february: 2, feb: 2,
+    march: 3, mar: 3,
+    april: 4, apr: 4,
+    may: 5,
+    june: 6, jun: 6,
+    july: 7, jul: 7,
+    august: 8, aug: 8,
+    september: 9, sep: 9, sept: 9,
+    october: 10, oct: 10,
+    november: 11, nov: 11,
+    december: 12, dec: 12,
+  };
+  return map[normalized] ?? null;
+}
+
+function sortLabelsChronologicallyIfMonths(labels: string[]): string[] {
+  const monthPairs = labels.map((label) => ({ label, month: monthNumber(label) }));
+  if (monthPairs.every((p) => p.month != null)) {
+    return [...monthPairs]
+      .sort((a, b) => (a.month as number) - (b.month as number))
+      .map((p) => p.label);
+  }
+  return labels;
+}
+
 export function buildChartSpec(
   columns: string[],
   rows: Record<string, unknown>[],
   chartType: "line" | "bar" | "pie" | "funnel" | "table"
 ): Record<string, unknown> {
-  const labels = columns[0]
-    ? rows.map((r) => String(serializeCell(r[columns[0]])))
+  const labelCol = columns[0];
+  const labels = labelCol
+    ? rows.map((r) => String(serializeCell(r[labelCol])))
     : [];
-  const dataCols = columns.slice(1).filter((c) => {
-    const v = rows[0]?.[c];
-    return typeof v === "number" || (typeof v === "string" && !isNaN(Number(v)));
-  });
+  const dataCols = columns.slice(1).filter((c) => isNumericColumn(c, rows));
+
+  // Long format pivot support: [x, series, value] -> labels + datasets per series
+  if ((chartType === "line" || chartType === "bar") && labelCol && columns.length >= 3 && dataCols.length === 1) {
+    const valueCol = dataCols[0];
+    const seriesCol = columns.slice(1).find((c) => c !== valueCol && !isNumericColumn(c, rows));
+
+    if (seriesCol) {
+      const xSeen = new Set<string>();
+      const seriesSeen = new Set<string>();
+      const pivot = new Map<string, Map<string, number>>();
+
+      for (const row of rows) {
+        const x = String(serializeCell(row[labelCol]));
+        const series = String(serializeCell(row[seriesCol]));
+        const raw = row[valueCol];
+        const value = typeof raw === "number" ? raw : Number(raw) || 0;
+
+        xSeen.add(x);
+        seriesSeen.add(series);
+        if (!pivot.has(series)) pivot.set(series, new Map<string, number>());
+        const xMap = pivot.get(series) as Map<string, number>;
+        xMap.set(x, (xMap.get(x) ?? 0) + value);
+      }
+
+      const pivotLabels = sortLabelsChronologicallyIfMonths(Array.from(xSeen));
+      const datasets = Array.from(seriesSeen).sort().map((series) => {
+        const xMap = pivot.get(series) ?? new Map<string, number>();
+        return {
+          name: series,
+          data: pivotLabels.map((x) => xMap.get(x) ?? 0),
+        };
+      });
+
+      return {
+        type: chartType,
+        labels: pivotLabels,
+        datasets,
+      };
+    }
+  }
+
   const datasets = dataCols.map((col) => ({
     name: col,
     data: rows.map((r) => {
