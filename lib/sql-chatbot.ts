@@ -8,19 +8,23 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 export function inferChartType(
   columns: string[],
   rows: Record<string, unknown>[],
-  firstCol: string
+  firstCol: string,
+  question?: string
 ): "line" | "bar" | "pie" | "funnel" | "table" {
   if (rows.length === 0) return "table";
   // Single-row results (scalars, single values) are not chart-worthy — show as table
   if (rows.length === 1) return "table";
+  const asksPie = /\b(pie|donut|doughnut)\b/i.test(question ?? "");
   const hasDate = /date|time|month|year|day/i.test(firstCol) || columns.some((c) => /month|date|time|year/i.test(c));
   const numCols = columns.filter((c) => {
     const v = rows[0]?.[c];
     return typeof v === "number" || (typeof v === "string" && !isNaN(Number(v)));
   });
+  // Honor explicit user intent for pie when shape is label + value.
+  if (asksPie && columns.length >= 2 && numCols.length === 1) return "pie";
   if (hasDate && numCols.length >= 1) return "line";
+  if (rows.length <= 12 && columns.length === 2 && numCols.length === 1) return "pie";
   if (rows.length <= 10 && numCols.length >= 1) return "bar";
-  if (rows.length <= 10 && columns.length === 2 && numCols.length === 1) return "pie";
   return "table";
 }
 
