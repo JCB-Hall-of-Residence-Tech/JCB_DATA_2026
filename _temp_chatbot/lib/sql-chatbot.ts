@@ -111,7 +111,7 @@ export async function generateInsights(
   apiKey: string
 ): Promise<string[]> {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
   const sample = rows.slice(0, 10).map((r) => JSON.stringify(r));
   const prompt = `You are a data analyst. Explain what this query result MEANS for the user.
 

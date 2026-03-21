@@ -70,7 +70,7 @@ AI / LLM Layer:
   - Google Generative AI SDK (@google/generative-ai)
   - LangChain + ChatGoogleGenerativeAI (Gemini models)
   - RAG (Retrieval Augmented Generation) for semantic context
-  - Model: gemini-2.5-flash for widget builder; gemini-3-flash for chat agent
+  - Model: gemini-2.5-pro for widget builder; gemini-2.5-pro for chat agent
 
 Data Model (Star Schema):
   Fact Table: videos

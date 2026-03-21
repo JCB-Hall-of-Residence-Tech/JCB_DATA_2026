@@ -48,7 +48,7 @@ export async function classifyAsAnalytics(
   sessionId: string
 ): Promise<boolean> {
   const model = new ChatGoogleGenerativeAI({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-pro",
     apiKey,
   });
   const history = getOrCreateHistory(sessionId);
@@ -160,7 +160,7 @@ export async function chatWithSQL(
   error?: string;
 }> {
   const model = new ChatGoogleGenerativeAI({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-pro",
     apiKey,
   });
 
@@ -250,7 +250,7 @@ export async function answerFromHistory(
   apiKey: string
 ): Promise<string> {
   const model = new ChatGoogleGenerativeAI({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-pro",
     apiKey,
   });
 
