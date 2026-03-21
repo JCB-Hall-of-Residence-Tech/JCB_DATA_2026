@@ -1,35 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-async function ensureTable() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS custom_widgets (
-      id SERIAL PRIMARY KEY,
-      title TEXT NOT NULL,
-      prompt TEXT NOT NULL,
-      sql_query TEXT NOT NULL,
-      widget_type TEXT NOT NULL,
-      config JSONB NOT NULL DEFAULT '{}',
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
-}
+export async function GET(req: NextRequest) {
+  const userId = req.nextUrl.searchParams.get("user_id") || "";
 
-export async function GET() {
-  await ensureTable();
-  const { rows } = await query(
-    `SELECT id, title, prompt, sql_query, widget_type, config, created_at
-     FROM custom_widgets
-     ORDER BY created_at DESC`
-  );
-  return NextResponse.json({ widgets: rows });
+  if (!userId) return NextResponse.json({ widgets: [] });
+
+  const { data, error } = await supabase
+    .from("custom_widgets")
+    .select("id, title, prompt, sql_query, widget_type, config, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) return NextResponse.json({ widgets: [], error: error.message });
+  return NextResponse.json({ widgets: data ?? [] });
 }
 
 export async function POST(req: NextRequest) {
-  await ensureTable();
   const body = await req.json() as {
+    user_id?: string;
     title?: string;
     prompt?: string;
     sql_query?: string;
@@ -37,18 +28,29 @@ export async function POST(req: NextRequest) {
     config?: Record<string, unknown>;
   };
 
-  const { title, prompt, sql_query, widget_type, config } = body;
+  const { user_id, title, prompt, sql_query, widget_type, config } = body;
 
   if (!title || !prompt || !sql_query || !widget_type) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const { rows } = await query(
-    `INSERT INTO custom_widgets (title, prompt, sql_query, widget_type, config)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, title, prompt, sql_query, widget_type, config, created_at`,
-    [title, prompt, sql_query, widget_type, JSON.stringify(config ?? {})]
-  );
+  if (!user_id) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
 
-  return NextResponse.json({ widget: rows[0] });
+  const { data, error } = await supabase
+    .from("custom_widgets")
+    .insert({
+      user_id,
+      title,
+      prompt,
+      sql_query,
+      widget_type,
+      config: config ?? {},
+    })
+    .select("id, title, prompt, sql_query, widget_type, config, created_at")
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ widget: data });
 }

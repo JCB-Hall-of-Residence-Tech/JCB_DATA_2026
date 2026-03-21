@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateInsight } from "@/lib/insight-generator";
+import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -41,5 +42,15 @@ export async function POST(req: NextRequest) {
   }
 
   const insight = await generateInsight({ page, widget, filters, data: contextData });
+
+  // Cache the generated insight in Supabase
+  const filtersKey = Object.keys(filters).length
+    ? JSON.stringify(filters, Object.keys(filters).sort())
+    : "";
+  await supabase.from("insights_cache").upsert(
+    { page, widget, filters_key: filtersKey, insight, updated_at: new Date().toISOString() },
+    { onConflict: "page,widget,filters_key" }
+  );
+
   return NextResponse.json({ insight, computed: true });
 }

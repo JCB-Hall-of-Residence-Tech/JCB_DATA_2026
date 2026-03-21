@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   BarChart,
   Bar,
@@ -241,25 +242,29 @@ function WidgetRenderer({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Page6() {
+  const { user } = useAuth();
+  const userId = user?.id ?? "";
   const [prompt, setPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [preview, setPreview] = useState<GenerateResult | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [widgets, setWidgets] = useState<SavedWidget[]>([]);
   const [widgetsLoading, setWidgetsLoading] = useState(true);
 
   const loadWidgets = useCallback(async () => {
+    if (!userId) return;
     setWidgetsLoading(true);
     try {
-      const r = await fetch("/api/page6/widgets");
+      const r = await fetch(`/api/page6/widgets?user_id=${encodeURIComponent(userId)}`);
       const d = (await r.json()) as { widgets: SavedWidget[] };
       setWidgets(d.widgets ?? []);
     } finally {
       setWidgetsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     loadWidgets();
@@ -291,13 +296,15 @@ export default function Page6() {
   }
 
   async function handleSave() {
-    if (!preview) return;
+    if (!preview || !userId) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const r = await fetch("/api/page6/widgets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          user_id: userId,
           title: editTitle.trim() || preview.title,
           prompt,
           sql_query: preview.sql,
@@ -305,18 +312,23 @@ export default function Page6() {
           config: preview.chart_spec,
         }),
       });
-      if (r.ok) {
-        setPreview(null);
-        setPrompt("");
-        await loadWidgets();
+      const json = await r.json().catch(() => ({})) as { error?: string };
+      if (!r.ok) {
+        setSaveError(json.error ?? `Save failed (${r.status})`);
+        return;
       }
+      setPreview(null);
+      setPrompt("");
+      await loadWidgets();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Network error");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: number) {
-    await fetch(`/api/page6/widgets/${id}`, { method: "DELETE" });
+    await fetch(`/api/page6/widgets/${id}?user_id=${encodeURIComponent(userId)}`, { method: "DELETE" });
     setWidgets((prev) => prev.filter((w) => w.id !== id));
   }
 
@@ -423,11 +435,16 @@ export default function Page6() {
                 </pre>
               </details>
 
+              {/* Save error */}
+              {saveError && (
+                <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{saveError}</p>
+              )}
+
               {/* Save */}
               <div className="flex justify-end pt-1">
                 <button
                   onClick={handleSave}
-                  disabled={saving}
+                  disabled={saving || !userId}
                   className="px-5 py-2 rounded-lg bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 disabled:opacity-50 transition-colors"
                 >
                   {saving ? "Saving…" : "Save to Dashboard"}

@@ -31,11 +31,37 @@ export function InsightButton({
   const [insight, setInsight] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cached, setCached] = useState(false);
 
-  async function fetchInsight() {
+  const filtersKey = Object.keys(filters).length
+    ? JSON.stringify(filters, Object.keys(filters).sort())
+    : "";
+
+  async function loadInsight(forceRegenerate = false) {
     setLoading(true);
     setError(null);
-    setInsight(null);
+
+    // 1. Check cache unless regenerating
+    if (!forceRegenerate) {
+      try {
+        const params = new URLSearchParams({ page, widget, filters: filtersKey });
+        const res = await fetch(`/api/insights?${params}`);
+        if (res.ok) {
+          const json = await res.json().catch(() => ({}));
+          if (json.cached && json.insight) {
+            setInsight(json.insight);
+            setCached(true);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Cache miss — fall through to compute
+      }
+    }
+
+    // 2. Compute fresh insight
+    setCached(false);
     try {
       const res = await fetch("/api/insights/compute", {
         method: "POST",
@@ -54,15 +80,22 @@ export function InsightButton({
     }
   }
 
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation();
+    setIsOpen(true);
+    loadInsight(false);
+  }
+
+  function handleRegenerate() {
+    setInsight(null);
+    loadInsight(true);
+  }
+
   return (
     <>
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(true);
-          fetchInsight();
-        }}
+        onClick={handleOpen}
         className={`inline-flex h-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tracking-wide transition-colors ${theme(page)} ${className}`}
         aria-label="Actionable insight"
         title="Actionable insight"
@@ -76,6 +109,8 @@ export function InsightButton({
         insight={insight}
         loading={loading}
         error={error}
+        cached={cached}
+        onRegenerate={handleRegenerate}
       />
     </>
   );

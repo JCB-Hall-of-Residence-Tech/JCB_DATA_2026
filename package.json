@@ -13,6 +13,7 @@
     "@google/generative-ai": "^0.24.1",
     "@langchain/core": "^1.1.33",
     "@langchain/google-genai": "^2.1.26",
+    "@supabase/supabase-js": "^2.99.3",
     "chart.js": "^4.5.1",
     "langchain": "^1.2.34",
     "next": "16.1.6",

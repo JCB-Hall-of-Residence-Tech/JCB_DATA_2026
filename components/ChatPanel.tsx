@@ -30,6 +30,7 @@ interface ChatPanelProps {
   open: boolean;
   onClose: () => void;
   pageContext?: string;
+  userId?: string;
 }
 
 // ─── Chart rendering ───────────────────────────────────────────────────────────
@@ -223,11 +224,12 @@ function useCenteredPosition(width: number, height: number) {
   return [pos, setPos] as const;
 }
 
-export default function ChatPanel({ open, onClose, pageContext }: ChatPanelProps) {
+export default function ChatPanel({ open, onClose, pageContext, userId }: ChatPanelProps) {
   const [sessions, setSessions] = useState<ChatSession[]>(() => [
     { id: "1", title: "Chat 1", messages: [] },
   ]);
   const [activeId, setActiveId] = useState("1");
+  const [loadedForUser, setLoadedForUser] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [size, setSize] = useState({ w: DEFAULT_WIDTH, h: DEFAULT_HEIGHT });
@@ -314,6 +316,44 @@ export default function ChatPanel({ open, onClose, pageContext }: ChatPanelProps
       revealTimersRef.current = [];
     };
   }, []);
+
+  // ── Load sessions from Supabase when user changes or first open ──────────
+  useEffect(() => {
+    if (!userId || loadedForUser === userId) return;
+    setLoadedForUser(userId);
+    fetch(`/api/chat/sessions?user_id=${encodeURIComponent(userId)}`)
+      .then((r) => r.json())
+      .then((data: { sessions?: { id: string; title: string; messages: ChatMessage[] }[] }) => {
+        if (data.sessions && data.sessions.length > 0) {
+          const loaded = data.sessions.map((s) => ({
+            id: s.id,
+            title: s.title,
+            messages: (s.messages ?? []) as ChatMessage[],
+          }));
+          setSessions(loaded);
+          setActiveId(loaded[0].id);
+        }
+      })
+      .catch(() => {});
+  }, [userId, loadedForUser]);
+
+  // ── Persist a session to Supabase ─────────────────────────────────────────
+  const saveSession = useCallback(
+    (session: ChatSession) => {
+      if (!userId) return;
+      fetch("/api/chat/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: session.id,
+          user_id: userId,
+          title: session.title,
+          messages: session.messages,
+        }),
+      }).catch(() => {});
+    },
+    [userId]
+  );
 
   const updateAssistantMessage = useCallback(
     (messageId: string, patch: Partial<ChatMessage>) => {
@@ -422,17 +462,36 @@ export default function ChatPanel({ open, onClose, pageContext }: ChatPanelProps
       );
     } finally {
       setLoading(false);
+      // Save session after response completes (delay lets reveal timers fire first)
+      setTimeout(() => {
+        setSessions((prev) => {
+          const session = prev.find((s) => s.id === activeId);
+          if (session) saveSession(session);
+          return prev;
+        });
+      }, 1500);
     }
-  }, [input, loading, activeId, pageContext, updateAssistantMessage]);
+  }, [input, loading, activeId, pageContext, updateAssistantMessage, saveSession]);
 
   const addChat = useCallback(() => {
     const id = crypto.randomUUID();
-    setSessions((prev) => [
-      ...prev,
-      { id, title: `Chat ${prev.length + 1}`, messages: [] },
-    ]);
+    const newSession: ChatSession = { id, title: `Chat ${sessions.length + 1}`, messages: [] };
+    setSessions((prev) => [...prev, newSession]);
     setActiveId(id);
-  }, []);
+    saveSession(newSession);
+  }, [sessions.length, saveSession]);
+
+  const deleteSession = useCallback((id: string) => {
+    setSessions((prev) => {
+      const remaining = prev.filter((s) => s.id !== id);
+      const next = remaining.length > 0 ? remaining : [{ id: crypto.randomUUID(), title: "Chat 1", messages: [] }];
+      setActiveId(next[0].id);
+      if (userId) {
+        fetch(`/api/chat/sessions/${id}?user_id=${encodeURIComponent(userId)}`, { method: "DELETE" }).catch(() => {});
+      }
+      return next;
+    });
+  }, [userId]);
 
   if (!open) return null;
 
@@ -462,17 +521,27 @@ export default function ChatPanel({ open, onClose, pageContext }: ChatPanelProps
         >
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-1 min-w-0">
             {sessions.map((s) => (
-              <button
+              <div
                 key={s.id}
-                onClick={() => setActiveId(s.id)}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`shrink-0 flex items-center gap-1 pl-3 pr-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   activeId === s.id
                     ? "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md shadow-red-500/25"
                     : "bg-white/80 border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
                 }`}
               >
-                {s.title}
-              </button>
+                <button onClick={() => setActiveId(s.id)} className="whitespace-nowrap">
+                  {s.title}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                  className={`ml-0.5 rounded p-0.5 transition-colors ${activeId === s.id ? "hover:bg-white/20 text-white/70 hover:text-white" : "hover:bg-red-50 text-slate-300 hover:text-red-400"}`}
+                  title="Delete chat"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             ))}
             <button
               onClick={addChat}

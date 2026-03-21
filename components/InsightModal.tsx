@@ -10,6 +10,8 @@ interface InsightModalProps {
   insight: string | null;
   loading: boolean;
   error: string | null;
+  onRegenerate?: () => void;
+  cached?: boolean;
 }
 
 export default function InsightModal({
@@ -19,6 +21,8 @@ export default function InsightModal({
   insight,
   loading,
   error,
+  onRegenerate,
+  cached,
 }: InsightModalProps) {
   const [visible, setVisible] = useState(false);
 
@@ -161,7 +165,22 @@ export default function InsightModal({
         </div>
 
         {/* ── Footer ── */}
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/60 flex justify-end">
+        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/60 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {cached && !loading && (
+              <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Cached</span>
+            )}
+            {onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                disabled={loading}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 bg-white border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className={loading ? "animate-spin inline-block" : ""}>↻</span>
+                Regenerate
+              </button>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 transition-colors"

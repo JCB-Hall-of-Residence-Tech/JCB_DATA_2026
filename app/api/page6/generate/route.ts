@@ -57,11 +57,13 @@ Given a user prompt, respond with ONLY a valid JSON object (no markdown, no extr
 }
 
 Widget type rules:
-- "kpi" → single aggregate number (one row, ideally one column)
-- "line" → data with a time/month dimension + numeric columns (good for trends)
-- "bar" → category vs metric comparisons (up to 20 rows)
-- "pie" → small category breakdown (2–8 rows, exactly 2 columns: label + value)
-- "table" → detailed multi-column data
+- "kpi" → ONLY when the user explicitly asks for a single number/metric/count with NO chart. One row, one numeric column.
+- "line" → data with a time/month dimension + numeric columns (good for trends). Use when user says "trend", "over time", "monthly".
+- "bar" → category vs metric comparisons (up to 20 rows). Use when user says "chart", "compare", "top N", "by client/channel/language".
+- "pie" → small category breakdown (2–8 rows, exactly 2 columns: label + value). Use when user says "share", "distribution", "breakdown".
+- "table" → detailed multi-column data. Use when user says "list", "table", "show all".
+
+IMPORTANT: If the user says "chart", "graph", or "visualize", NEVER use "kpi". Use bar, line, or pie instead.
 
 SQL rules:
 - SELECT only. Never: DROP, DELETE, UPDATE, INSERT, ALTER, TRUNCATE, CREATE, GRANT, REVOKE.
@@ -104,8 +106,19 @@ SQL rules:
     );
   }
 
-  try {
-    const { rows } = await query(parsed.sql);
+  // Strip trailing semicolons — exec_sql wraps the query so a trailing `;` breaks it
+  parsed.sql = parsed.sql.replace(/;\s*$/, "");
+
+  // Hard override: if user asked for a chart/graph but LLM returned kpi, force bar
+  const wantsChart = /\b(chart|graph|visuali[sz]e|plot)\b/i.test(prompt);
+  if (wantsChart && parsed.widget_type === "kpi") {
+    parsed.widget_type = "bar";
+    // Rewrite SQL to return all clients instead of just LIMIT 1
+    parsed.sql = parsed.sql.replace(/\bLIMIT\s+1\b/i, "LIMIT 20");
+  }
+
+  async function executeAndBuild(sql: string) {
+    const { rows } = await query(sql);
     const typedRows = rows as Record<string, unknown>[];
     const columns = typedRows.length > 0 ? Object.keys(typedRows[0]) : [];
 
@@ -113,12 +126,21 @@ SQL rules:
 
     if (parsed.widget_type === "kpi") {
       const firstRow = typedRows[0] ?? {};
-      const firstKey = columns[0] ?? "value";
-      const rawVal = firstRow[firstKey];
+      // Find the numeric column (for the value) and a text column (for the label)
+      const numericKey = columns.find((k) => {
+        const v = firstRow[k];
+        return typeof v === "number" || (v !== null && v !== "" && !isNaN(Number(v)));
+      });
+      const labelKey = columns.find((k) => k !== numericKey);
+      const valueKey = numericKey ?? columns[0] ?? "value";
+      const rawVal = firstRow[valueKey];
+      const numericValue = typeof rawVal === "number" ? rawVal : Number(rawVal) || 0;
+      // If there's a companion text column (e.g. client_id), use its value as the label
+      const labelValue = labelKey ? String(firstRow[labelKey] ?? labelKey) : valueKey;
       chartSpec = {
         type: "kpi",
-        value: typeof rawVal === "number" ? rawVal : Number(rawVal) || 0,
-        label: firstKey,
+        value: numericValue,
+        label: labelValue,
       };
     } else {
       const validType = (["bar", "line", "pie", "table"] as const).includes(
@@ -131,21 +153,72 @@ SQL rules:
       chartSpec.type = parsed.widget_type;
     }
 
-    return NextResponse.json({
-      title: parsed.title,
-      widget_type: parsed.widget_type,
-      sql: parsed.sql,
-      columns,
-      rows: typedRows,
-      chart_spec: chartSpec,
-    });
+    return { columns, typedRows, chartSpec };
+  }
+
+  // First attempt
+  let result: Awaited<ReturnType<typeof executeAndBuild>> | null = null;
+  let firstError: string | null = null;
+
+  try {
+    result = await executeAndBuild(parsed.sql);
   } catch (err) {
+    firstError = err instanceof Error ? err.message : String(err);
+  }
+
+  // If it failed, ask the LLM to self-correct once
+  if (firstError !== null) {
+    const retryPrompt = `${systemPrompt}
+
+User prompt: ${prompt}
+
+Your previous attempt produced this SQL:
+\`\`\`sql
+${parsed.sql}
+\`\`\`
+
+It failed with this PostgreSQL error:
+${firstError}
+
+Fix the SQL so it runs correctly. If the requested data genuinely does not exist in the schema, respond with widget_type "table" and a SQL that returns a single row explaining this, e.g.:
+SELECT 'No data available for this query' AS message
+
+Respond with ONLY the corrected JSON object.`;
+
+    try {
+      const retryResult = await model.generateContent(retryPrompt);
+      const retryText = retryResult.response.text().trim();
+      const retryMatch = retryText.match(/\{[\s\S]*\}/);
+      const retryParsed = JSON.parse(retryMatch?.[0] ?? retryText) as typeof parsed;
+      if (retryParsed.sql) {
+        retryParsed.sql = retryParsed.sql.replace(/;\s*$/, "");
+        parsed.sql = retryParsed.sql;
+        parsed.title = retryParsed.title || parsed.title;
+        parsed.widget_type = retryParsed.widget_type || parsed.widget_type;
+        result = await executeAndBuild(retryParsed.sql);
+      }
+    } catch {
+      // Retry also failed — fall through to return the original error
+    }
+  }
+
+  if (!result) {
     return NextResponse.json(
       {
-        error: `SQL execution failed: ${err instanceof Error ? err.message : String(err)}`,
+        error: `SQL execution failed: ${firstError}`,
         sql: parsed.sql,
       },
       { status: 400 }
     );
   }
+
+  const { columns, typedRows, chartSpec } = result;
+  return NextResponse.json({
+    title: parsed.title,
+    widget_type: parsed.widget_type,
+    sql: parsed.sql,
+    columns,
+    rows: typedRows,
+    chart_spec: chartSpec,
+  });
 }

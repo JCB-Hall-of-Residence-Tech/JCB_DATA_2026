@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -12,6 +12,14 @@ export async function DELETE(
   if (isNaN(numId)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
-  await query(`DELETE FROM custom_widgets WHERE id = $1`, [numId]);
+  const userId = req.nextUrl.searchParams.get("user_id") || "";
+
+  const { error } = await supabase
+    .from("custom_widgets")
+    .delete()
+    .eq("id", numId)
+    .eq("user_id", userId);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
