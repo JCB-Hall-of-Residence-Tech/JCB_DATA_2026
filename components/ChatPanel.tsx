@@ -132,12 +132,22 @@ function ChatTable({ columns, rows }: { columns: string[]; rows: unknown[][] }) 
   );
 }
 
+function NoDataState({ message = "No data found for this query." }: { message?: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 px-4 py-5 text-center">
+      <p className="text-sm font-medium text-slate-600">{message}</p>
+      <p className="mt-1 text-xs text-slate-400">Try broadening filters or changing the date range.</p>
+    </div>
+  );
+}
+
 function ChatChart({ spec }: { spec: Record<string, unknown> }) {
   const type = spec.type as string;
 
   if (type === "table") {
     const columns = (spec.columns as string[]) || [];
     const rows = (spec.rows as unknown[][]) || [];
+    if (columns.length === 0 || rows.length === 0) return <NoDataState />;
     return <ChatTable columns={columns} rows={rows} />;
   }
 
@@ -149,6 +159,7 @@ function ChatChart({ spec }: { spec: Record<string, unknown> }) {
       backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
       borderRadius: 4,
     }));
+    if (labels.length === 0 || datasets.length === 0) return <NoDataState />;
     return (
       <div className="h-48">
         <Bar
@@ -171,6 +182,7 @@ function ChatChart({ spec }: { spec: Record<string, unknown> }) {
       borderWidth: 2,
       pointRadius: 3,
     }));
+    if (labels.length === 0 || datasets.length === 0) return <NoDataState />;
     return (
       <div className="h-48">
         <Line
@@ -184,6 +196,7 @@ function ChatChart({ spec }: { spec: Record<string, unknown> }) {
   if (type === "pie") {
     const labels = (spec.labels as string[]) || [];
     const values = (spec.values as number[]) || [];
+    if (labels.length === 0 || values.length === 0) return <NoDataState />;
     return (
       <div className="h-48">
         <Doughnut

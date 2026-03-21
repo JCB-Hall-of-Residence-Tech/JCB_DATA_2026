@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useExplorerCache } from "./useExplorerCache";
 import s from "./page5.module.css";
 import { DefinitionButton } from "@/components/ui/DefinitionButton";
 import { InsightButton } from "@/components/ui/InsightButton";
@@ -766,15 +767,17 @@ function VideosTable({ data }: { data: TableData }) {
 }
 
 export default function Page5() {
-  const [loading, setLoading] = useState(true);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [videosData, setVideosData] = useState<TableData>({
-    rowCount: 0,
-    rows: [],
-  });
-  const [summaryDataMap, setSummaryDataMap] = useState<
-    Record<string, TableData>
-  >({});
+  const { data: explorerData, loading, invalidateAndRefetch } = useExplorerCache();
+
+  const alerts: Alert[] = explorerData?.alerts ?? [];
+  const videosData: TableData = explorerData?.tables?.videos ?? { rowCount: 0, rows: [] };
+  const summaryDataMap = useMemo(() => {
+    const sMap: Record<string, TableData> = {};
+    for (const t of ALL_SUMMARY_TABLES) {
+      if (explorerData?.tables?.[t]) sMap[t] = explorerData.tables[t];
+    }
+    return sMap;
+  }, [explorerData]);
   const [visibleSummaryTables, setVisibleSummaryTables] = useState<string[]>([
     ...ALL_SUMMARY_TABLES,
   ]);
@@ -788,29 +791,9 @@ export default function Page5() {
   const [expandedTable, setExpandedTable] = useState<string | null>(null);
   const [addColumnTable, setAddColumnTable] = useState<string | null>(null);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/page5");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      setAlerts(json.alerts || []);
-      if (json.tables?.videos) setVideosData(json.tables.videos);
-      const sMap: Record<string, TableData> = {};
-      for (const t of ALL_SUMMARY_TABLES) {
-        if (json.tables?.[t]) sMap[t] = json.tables[t];
-      }
-      setSummaryDataMap(sMap);
-    } catch (err) {
-      console.error("Failed to fetch dashboard data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // invalidateAndRefetch busts the cache and re-fetches fresh data.
+  // Passed to mutation modals (upload, add-column) via the fetchData alias.
+  const fetchData = invalidateAndRefetch;
 
   const filteredAlerts =
     alertFilter === "all"
