@@ -98,6 +98,10 @@ function sortLabelsChronologicallyIfMonths(labels: string[]): string[] {
   return labels;
 }
 
+function isTemporalColumnName(col: string): boolean {
+  return /date|time|month|year|day|week|quarter/i.test(col);
+}
+
 export function buildChartSpec(
   columns: string[],
   rows: Record<string, unknown>[],
@@ -109,18 +113,23 @@ export function buildChartSpec(
     : [];
   const dataCols = columns.slice(1).filter((c) => isNumericColumn(c, rows));
 
-  // Long format pivot support: [x, series, value] -> labels + datasets per series
-  if ((chartType === "line" || chartType === "bar") && labelCol && columns.length >= 3 && dataCols.length === 1) {
+  // Long format pivot support: [x, series, value] -> labels + datasets per series.
+  // Also handles reversed order (e.g. [series, x, value]) by inferring x/series columns.
+  if ((chartType === "line" || chartType === "bar") && columns.length >= 3 && dataCols.length === 1) {
     const valueCol = dataCols[0];
-    const seriesCol = columns.slice(1).find((c) => c !== valueCol && !isNumericColumn(c, rows));
+    const nonNumericCols = columns.filter((c) => c !== valueCol && !isNumericColumn(c, rows));
+    const inferredXCol =
+      nonNumericCols.find((c) => isTemporalColumnName(c))
+      ?? (labelCol && nonNumericCols.includes(labelCol) ? labelCol : nonNumericCols[0]);
+    const seriesCol = nonNumericCols.find((c) => c !== inferredXCol);
 
-    if (seriesCol) {
+    if (inferredXCol && seriesCol) {
       const xSeen = new Set<string>();
       const seriesSeen = new Set<string>();
       const pivot = new Map<string, Map<string, number>>();
 
       for (const row of rows) {
-        const x = String(serializeCell(row[labelCol]));
+        const x = String(serializeCell(row[inferredXCol]));
         const series = String(serializeCell(row[seriesCol]));
         const raw = row[valueCol];
         const value = typeof raw === "number" ? raw : Number(raw) || 0;
