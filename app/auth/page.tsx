@@ -28,6 +28,12 @@ export default function AuthPage() {
     setSuccess(null);
     setLoading(true);
 
+    if (!/^[a-zA-Z0-9._%+\-]+\.frammer@gmail\.com$/.test(email)) {
+      setError("Email must be in the format: xyz.frammer@gmail.com");
+      setLoading(false);
+      return;
+    }
+
     try {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -139,7 +145,7 @@ export default function AuthPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Shubham Kumar"
+                  placeholder=""
                   className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-800 placeholder-gray-300 focus:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-100 transition-all"
                 />
               </div>
@@ -155,7 +161,9 @@ export default function AuthPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="xyz.frammer@gmail.com"
+                pattern="^[a-zA-Z0-9._%+\-]+\.frammer@gmail\.com$"
+                title="Email must be in the format: xyz.frammer@gmail.com"
                 className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-800 placeholder-gray-300 focus:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-100 transition-all"
               />
             </div>
@@ -171,7 +179,7 @@ export default function AuthPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder=""
                   className="w-full rounded-xl border border-gray-200 px-4 py-2.5 pr-11 text-sm text-gray-800 placeholder-gray-300 focus:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-100 transition-all"
                 />
                 <button
